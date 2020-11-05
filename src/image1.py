@@ -23,13 +23,44 @@ class image_converter:
     self.image_sub1 = rospy.Subscriber("/camera1/robot/image_raw",Image,self.callback1)
     # initialize the bridge between openCV and ROS
     self.bridge = CvBridge()
+    #initialize a publisher to move the joint2
+    self.joint2_pub = rospy.Publisher("/robot/joint2_position_controller/command", Float64, queue_size=10)
+    #initialize a publisher to move the joint3
+    self.joint3_pub = rospy.Publisher("/robot/joint3_position_controller/command", Float64, queue_size=10)
+    #initialize a publisher to move the joint4
+    self.joint4_pub = rospy.Publisher("/robot/joint4_position_controller/command", Float64, queue_size=10)
 
+  ###Functions to move joints 2-3###
+  def move_joint2(self, t):
+    return np.pi*np.sin((np.pi/15.0)*t)
+
+  def move_joint3(self, t):
+    return np.pi*np.sin((np.pi/18.0)*t)
+
+  def move_joint4(self, t):
+    return np.pi*np.sin((np.pi/20.0)*t)
+
+  def compute_joint_angles(self):
+    time = rospy.get_time()
+    joint2_angle = self.move_joint2(time)
+    joint3_angle = self.move_joint3(time)
+    joint4_angle = self.move_joint4(time)
+    return joint2_angle, joint3_angle, joint4_angle
 
   # Recieve data from camera 1, process it, and publish
   def callback1(self,data):
-    # Recieve the image
+
+    #update to current time
+    self.time = rospy.get_time()
+    joint2_angle, joint3_angle, joint4_angle = self.compute_joint_angles()
+
+    # Receive the image
     try:
       self.cv_image1 = self.bridge.imgmsg_to_cv2(data, "bgr8")
+      #publish new joint angles
+      self.joint2_pub.publish(joint2_angle)
+      self.joint3_pub.publish(joint3_angle)
+      self.joint4_pub.publish(joint4_angle)
     except CvBridgeError as e:
       print(e)
     

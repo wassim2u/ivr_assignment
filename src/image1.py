@@ -29,19 +29,21 @@ class image_converter:
     self.joint3_pub = rospy.Publisher("/robot/joint3_position_controller/command", Float64, queue_size=10)
     #initialize a publisher to move the joint4
     self.joint4_pub = rospy.Publisher("/robot/joint4_position_controller/command", Float64, queue_size=10)
+    #get start time
+    self.init_time = rospy.get_time()
 
   ###Functions to move joints 2-3###
   def move_joint2(self, t):
-    return np.pi*np.sin((np.pi/15.0)*t)
+    return float((np.pi/2)*np.sin((np.pi/15.0)*t))
 
   def move_joint3(self, t):
-    return np.pi*np.sin((np.pi/18.0)*t)
+    return float((np.pi/2)*np.sin((np.pi/18.0)*t))
 
   def move_joint4(self, t):
-    return np.pi*np.sin((np.pi/20.0)*t)
+    return float((np.pi/2)*np.sin((np.pi/20.0)*t))
 
   def compute_joint_angles(self):
-    time = rospy.get_time()
+    time = np.array([rospy.get_time() - self.init_time])
     joint2_angle = self.move_joint2(time)
     joint3_angle = self.move_joint3(time)
     joint4_angle = self.move_joint4(time)

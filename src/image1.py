@@ -49,8 +49,18 @@ class image_converter:
     joint4_angle = self.move_joint4(time)
     return joint2_angle, joint3_angle, joint4_angle
 
+  ###Functions to compute forward kinematics###
+  def forward_kinematics(self, theta1, theta2, theta3, theta4):
+    x = (1/4)*(7*np.sin(theta2+theta3)+6*np.sin(theta4+theta2+theta3)-6*np.sin(theta4-theta2+theta3)+7*np.sin(theta2-theta3))
+    y = (1/8)*(-20*np.sin(theta1)-14*np.sin(theta1+theta3)-12*np.sin(theta4+theta1+theta3)-12*np.sin(theta4-theta1+theta3)-7*np.sin(theta1+theta2+theta3)-6*np.sin(theta4+theta1+theta2+theta3)+6*np.sin(theta4-theta1+theta2+theta3)+6*np.sin(theta4-theta1-theta2+theta3)+14*np.sin(theta1-theta3)-7*np.sin(theta1+theta2-theta3)-7*np.sin(theta1-theta2-theta3))
+    z = (1/8)*(-20*np.cos(theta1)-14*np.cos(theta1+theta3)-12*np.cos(theta4+theta1+theta3)-12*np.cos(theta4-theta1+theta3)-7*np.cos(theta1+theta2+theta3)-6*np.cos(theta4+theta1+theta2+theta3)+6*np.cos(theta4-theta1+theta2+theta3)+6*np.cos(theta4-theta1-theta2+theta3)+14*np.cos(theta1-theta3)-7*np.cos(theta1+theta2-theta3)-7*np.cos(theta1-theta2-theta3))
+
+    return x,y,z
+
   # Recieve data from camera 1, process it, and publish
   def callback1(self,data):
+
+    print(self.forward_kinematics(0,0,0,0))
 
     #update to current time
     self.time = rospy.get_time()
@@ -60,9 +70,9 @@ class image_converter:
     try:
       self.cv_image1 = self.bridge.imgmsg_to_cv2(data, "bgr8")
       #publish new joint angles
-      self.joint2_pub.publish(joint2_angle)
-      self.joint3_pub.publish(joint3_angle)
-      self.joint4_pub.publish(joint4_angle)
+      #self.joint2_pub.publish(joint2_angle)
+      #self.joint3_pub.publish(joint3_angle)
+      #self.joint4_pub.publish(joint4_angle)
     except CvBridgeError as e:
       print(e)
     

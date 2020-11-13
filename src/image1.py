@@ -5,6 +5,7 @@ import sys
 import rospy
 import cv2
 import numpy as np
+from numpy import sin, cos
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from std_msgs.msg import Float64MultiArray, Float64
@@ -50,21 +51,82 @@ class image_converter:
     return joint2_angle, joint3_angle, joint4_angle
 
   ###Functions to compute forward kinematics###
-  def forward_kinematics(self, theta1, theta2, theta3, theta4):
-    x = (1/4)*(7*np.sin(theta2+theta3)+6*np.sin(theta4+theta2+theta3)-6*np.sin(theta4-theta2+theta3)+7*np.sin(theta2-theta3))
-    y = (1/8)*(-20*np.sin(theta1)-14*np.sin(theta1+theta3)-12*np.sin(theta4+theta1+theta3)-12*np.sin(theta4-theta1+theta3)-7*np.sin(theta1+theta2+theta3)-6*np.sin(theta4+theta1+theta2+theta3)+6*np.sin(theta4-theta1+theta2+theta3)+6*np.sin(theta4-theta1-theta2+theta3)+14*np.sin(theta1-theta3)-7*np.sin(theta1+theta2-theta3)-7*np.sin(theta1-theta2-theta3))
-    z = (1/8)*(-20*np.cos(theta1)-14*np.cos(theta1+theta3)-12*np.cos(theta4+theta1+theta3)-12*np.cos(theta4-theta1+theta3)-7*np.cos(theta1+theta2+theta3)-6*np.cos(theta4+theta1+theta2+theta3)+6*np.cos(theta4-theta1+theta2+theta3)+6*np.cos(theta4-theta1-theta2+theta3)+14*np.cos(theta1-theta3)-7*np.cos(theta1+theta2-theta3)-7*np.cos(theta1-theta2-theta3))
+  def forward_kinematics(self, x, y, z, w):
+    xv = (float) (7*sin(y+z)+6*sin(w+y+z)-6*sin(w-y+z)+7*sin(y-z))/4
+    zv = (float) (20*cos(x)+14*cos(x+z)+12*cos(w+x+z)-12*cos(w-x+z)+7*cos(x+y+z)+6*cos(w+x+y+z)+6*cos(w-x+y+z)+7*cos(x-y+z)+6*cos(w+x-y+z)+6*cos(w-x-y+z)-14*cos(x-z)+7*cos(x+y-z)+7*cos(x-y-z))/8
+    yv = (float) (20*sin(x)+14*sin(x+z)+12*sin(w+x+z)+12*sin(w-x+z)+7*sin(x+y+z)+6*sin(w+x+y+z)-6*sin(w-x+y+z)+7*sin(x-y+z)+6*sin(w+x-y+z)-6*sin(w-x-y+z)-14*sin(x-z)+7*sin(x+y-z)+7*sin(x-y-z))/8
+    return xv,yv,zv
 
-    return x,y,z
+  ###These functions are merely there to verify the forward_kinematics function########################
+  def get_end_effector(self, cv_image):
+    lower_red = np.array([0,0,100])
+    upper_red = np.array([50,50,255])
+    cx_r, cy_r = self.get_joint_coordinates(cv_image, lower_red, upper_red)
+
+    return cx_r, cy_r
+
+  def convert_pixel_to_metres(self, cv_image):
+    lower_blue = np.array([100,0,0])
+    upper_blue = np.array([255,50,50])
+    cx_b, cy_b = self.get_joint_coordinates(cv_image, lower_blue, upper_blue)
+        
+    lower_green = np.array([0,100,0])
+    upper_green = np.array([50,255,50])
+    cx_g, cy_g = self.get_joint_coordinates(cv_image, lower_green, upper_green)
+
+    #get pixel to metres ratio
+    b = np.array([cx_b, cy_b])
+    g = np.array([cx_g, cy_g])
+
+    s = np.sum((b-g)**2)
+    dist = np.sqrt(s)
+    return 3.5/dist
+
+  def get_center(self, cv_image):
+    lower_yellow = np.array([0,100,100])
+    upper_yellow = np.array([50,255,255])
+    cx_y, cy_y = self.get_joint_coordinates(cv_image, lower_yellow, upper_yellow)
+
+    return cx_y, cy_y
+
+  def get_joint_coordinates(self,cv_image, lower, upper):
+    im = self.threshold(cv_image, lower, upper)
+    M = cv2.moments(im)
+
+    cx = int(M['m10']/M['m00'])
+    cy = int(M['m01']/M['m00'])
+
+    return cx, cy
+  ##########################################################################################
+
+  def threshold(self, cv_image, lower_range, upper_range):
+    #create mask
+    mask = cv2.inRange(cv_image, lower_range, upper_range)
+    return mask
 
   # Recieve data from camera 1, process it, and publish
   def callback1(self,data):
 
-    print(self.forward_kinematics(0,0,0,0))
+    try:
+      cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
+    except CvBridgeError as e:
+      print(e)
+
+    ratio = self.convert_pixel_to_metres(cv_image)
+
+    e1_x, e1_y = self.get_end_effector(cv_image)
+    c1_x, c1_y = self.get_center(cv_image)
+    e1_x *= ratio
+    e1_y *= ratio
+    c1_x *= ratio
+    c1_y *= ratio
+    print(c1_x-e1_x, c1_y-e1_y)
 
     #update to current time
     self.time = rospy.get_time()
     joint2_angle, joint3_angle, joint4_angle = self.compute_joint_angles()
+
+    print(self.forward_kinematics(0.0,0.0,0.0,1.0))
 
     # Receive the image
     try:

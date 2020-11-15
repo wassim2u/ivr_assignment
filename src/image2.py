@@ -132,10 +132,10 @@ class image_converter_2:
     ##Task 2##
     masked_circles = self.detect_circles(self.cv_image2)
     # Get Centers of each joint and end effector(red). 
-    yellow_center = self.predict_circle_center2(masked_circles['Yellow'])
-    blue_center = self.predict_circle_center2(masked_circles['Blue'])
-    green_center = self.predict_circle_center2(masked_circles['Green'])
-    red_center = self.predict_circle_center2(masked_circles['Red'])
+    yellow_center, yellow_radius = self.predict_circle_center2(masked_circles['Yellow'])
+    blue_center, blue_radius = self.predict_circle_center2(masked_circles['Blue'])
+    green_center, green_radius = self.predict_circle_center2(masked_circles['Green'])
+    red_center, red_radius = self.predict_circle_center2(masked_circles['Red'])
     # Get the position of center of target sphere
     target_center= self.detect_sphere_target2(self.cv_image2)
 

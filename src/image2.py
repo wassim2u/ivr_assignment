@@ -9,6 +9,7 @@ from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from std_msgs.msg import Float64MultiArray, Float64
 from cv_bridge import CvBridge, CvBridgeError
+from helpers import *
 
 
 class image_converter:
@@ -27,11 +28,30 @@ class image_converter:
 
   # Recieve data, process it, and publish
   def callback2(self,data):
+    
+
+    try:
+      cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
+    except CvBridgeError as e:
+      print(e)
+
+
+    ratio = convert_pixel_to_metres(cv_image)
+
+    e1_x, e1_y = get_end_effector(cv_image)
+    c1_x, c1_y = get_center(cv_image)
+    e1_x *= ratio
+    e1_y *= ratio
+    c1_x *= ratio
+    c1_y *= ratio
+    print(c1_x-e1_x, c1_y-e1_y)
+
     # Recieve the image
     try:
       self.cv_image2 = self.bridge.imgmsg_to_cv2(data, "bgr8")
     except CvBridgeError as e:
       print(e)
+
     # Uncomment if you want to save the image
     #cv2.imwrite('image_copy.png', cv_image)
     im2=cv2.imshow('window2', self.cv_image2)

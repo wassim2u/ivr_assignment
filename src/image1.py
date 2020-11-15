@@ -10,6 +10,7 @@ from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from std_msgs.msg import Float64MultiArray, Float64
 from cv_bridge import CvBridge, CvBridgeError
+from helpers import *
 
 
 class image_converter:
@@ -55,54 +56,7 @@ class image_converter:
     xv = (float) (7*sin(y+z)+6*sin(w+y+z)-6*sin(w-y+z)+7*sin(y-z))/4
     zv = (float) (20*cos(x)+14*cos(x+z)+12*cos(w+x+z)-12*cos(w-x+z)+7*cos(x+y+z)+6*cos(w+x+y+z)+6*cos(w-x+y+z)+7*cos(x-y+z)+6*cos(w+x-y+z)+6*cos(w-x-y+z)-14*cos(x-z)+7*cos(x+y-z)+7*cos(x-y-z))/8
     yv = (float) (20*sin(x)+14*sin(x+z)+12*sin(w+x+z)+12*sin(w-x+z)+7*sin(x+y+z)+6*sin(w+x+y+z)-6*sin(w-x+y+z)+7*sin(x-y+z)+6*sin(w+x-y+z)-6*sin(w-x-y+z)-14*sin(x-z)+7*sin(x+y-z)+7*sin(x-y-z))/8
-    return xv,yv,zv
-
-  ###These functions are merely there to verify the forward_kinematics function########################
-  def get_end_effector(self, cv_image):
-    lower_red = np.array([0,0,100])
-    upper_red = np.array([50,50,255])
-    cx_r, cy_r = self.get_joint_coordinates(cv_image, lower_red, upper_red)
-
-    return cx_r, cy_r
-
-  def convert_pixel_to_metres(self, cv_image):
-    lower_blue = np.array([100,0,0])
-    upper_blue = np.array([255,50,50])
-    cx_b, cy_b = self.get_joint_coordinates(cv_image, lower_blue, upper_blue)
-        
-    lower_green = np.array([0,100,0])
-    upper_green = np.array([50,255,50])
-    cx_g, cy_g = self.get_joint_coordinates(cv_image, lower_green, upper_green)
-
-    #get pixel to metres ratio
-    b = np.array([cx_b, cy_b])
-    g = np.array([cx_g, cy_g])
-
-    s = np.sum((b-g)**2)
-    dist = np.sqrt(s)
-    return 3.5/dist
-
-  def get_center(self, cv_image):
-    lower_yellow = np.array([0,100,100])
-    upper_yellow = np.array([50,255,255])
-    cx_y, cy_y = self.get_joint_coordinates(cv_image, lower_yellow, upper_yellow)
-
-    return cx_y, cy_y
-
-  def get_joint_coordinates(self,cv_image, lower, upper):
-    im = self.threshold(cv_image, lower, upper)
-    M = cv2.moments(im)
-
-    cx = int(M['m10']/M['m00'])
-    cy = int(M['m01']/M['m00'])
-
-    return cx, cy
-  ##########################################################################################
-
-  def threshold(self, cv_image, lower_range, upper_range):
-    #create mask
-    mask = cv2.inRange(cv_image, lower_range, upper_range)
-    return mask
+    return xv,yv,zv  
 
   # Recieve data from camera 1, process it, and publish
   def callback1(self,data):
@@ -112,10 +66,10 @@ class image_converter:
     except CvBridgeError as e:
       print(e)
 
-    ratio = self.convert_pixel_to_metres(cv_image)
+    ratio = convert_pixel_to_metres(cv_image)
 
-    e1_x, e1_y = self.get_end_effector(cv_image)
-    c1_x, c1_y = self.get_center(cv_image)
+    e1_x, e1_y = get_end_effector(cv_image)
+    c1_x, c1_y = get_center(cv_image)
     e1_x *= ratio
     e1_y *= ratio
     c1_x *= ratio
@@ -126,7 +80,7 @@ class image_converter:
     self.time = rospy.get_time()
     joint2_angle, joint3_angle, joint4_angle = self.compute_joint_angles()
 
-    print(self.forward_kinematics(0.0,0.0,0.0,1.0))
+    #print(self.forward_kinematics(0.0,0.0,0.0,1.0))
 
     # Receive the image
     try:
@@ -138,7 +92,7 @@ class image_converter:
     except CvBridgeError as e:
       print(e)
     
-    # Uncomment if you want to save the image
+    # Uncomment if you want to save the image 
     #cv2.imwrite('image_copy.png', cv_image)
 
     im1=cv2.imshow('window1', self.cv_image1)

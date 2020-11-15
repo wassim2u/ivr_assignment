@@ -122,26 +122,28 @@ class image_converter_1:
     masks = cv2.inRange(hsv_image, (10, 0, 0), (24, 255, 255))
     kernel = np.ones((3, 3), np.uint8)
     dilated_mask = cv2.erode(masks, kernel, iterations=2)
-    # check whether circle is visible by checking its area:
+    # check whether circle is visible by checking its area
     M = cv2.moments(dilated_mask)
     area = M['m00']
-    if (M['m00'] == 0):
+    if (area < 0.0001):
       # TODO: Tackle issue when its completely hidden
       pass
+    # Match template
+    center = self.match_sphere_template(img, dilated_mask)
+    return center
 
-    #Match template - Slides the template over input image to detect where the target is
-    result =cv2.matchTemplate(dilated_mask,self.sphere_template,cv2.TM_SQDIFF_NORMED)
-    #Find min and maximum value from the outputted image
+  # Matches binary image with sphere template. Returns the center of the matched shape (which should be sphere).
+  def match_sphere_template(self, img, dilated_mask):
+    # Match template
+    result = cv2.matchTemplate(dilated_mask, self.sphere_template, cv2.TM_SQDIFF_NORMED)
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
     width, height = self.sphere_template.shape[::-1]
     top_left = min_loc
     bottom_right = (top_left[0] + width, top_left[1] + height)
-
-    #Draw a rectangle on the original image
-    cv2.rectangle(img,top_left, bottom_right, 255, 2)
-    cv2.imshow("Detected ", result)
-    cv2.imshow("Detected Target", img)
-    return np.array([min_loc[0]+width/2,min_loc[1]+height/2])
+    # Draw a rectangle on the original image. Comment out if not needed
+    cv2.rectangle(img, top_left, bottom_right, 255, 2)
+    cv2.imshow("Detected Target - Image 2", img)
+    return np.array([min_loc[0] + width / 2, min_loc[1] + height / 2])
 
   # Draws the shape on the image. Call when needed for visualisation.
   def draw_boundary(self, img, mask):

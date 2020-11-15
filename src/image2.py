@@ -96,20 +96,26 @@ class image_converter_2:
     # check whether circle is visible by checking its area:
     M = cv2.moments(dilated_mask)
     area = M['m00']
-    if (M['m00'] == 0):
+    if (area < 0.0001):
       # TODO: Tackle issue when its completely hidden
       pass
+    # Match template
+    center = self.match_sphere_template(img,dilated_mask)
+    return center
+
+  #Matches binary image with sphere template. Returns the center of the matched shape (which should be sphere).
+  def match_sphere_template(self,img, dilated_mask):
     # Match template
     result = cv2.matchTemplate(dilated_mask, self.sphere_template, cv2.TM_SQDIFF_NORMED)
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
     width, height = self.sphere_template.shape[::-1]
     top_left = min_loc
     bottom_right = (top_left[0] + width, top_left[1] + height)
-
-    # Draw a rectangle on the original image
+    # Draw a rectangle on the original image. Comment out if not needed
     cv2.rectangle(img, top_left, bottom_right, 255, 2)
     cv2.imshow("Detected Target - Image 2", img)
     return np.array([min_loc[0] + width / 2, min_loc[1] + height / 2])
+
 
   # Recieve data, process it, and publish
   def callback2(self,data):
@@ -130,7 +136,7 @@ class image_converter_2:
     blue_center = self.predict_circle_center2(masked_circles['Blue'])
     green_center = self.predict_circle_center2(masked_circles['Green'])
     red_center = self.predict_circle_center2(masked_circles['Red'])
-    # Get the position of center of taegrt sphere
+    # Get the position of center of target sphere
     target_center= self.detect_sphere_target2(self.cv_image2)
 
 

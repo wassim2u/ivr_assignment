@@ -67,13 +67,38 @@ class image_converter_2:
     cz = int(M['m01'] / M['m00'])
     return np.array([cx, cz])
 
+    #TODO: Solve edge case for thiss well when its completely hidden
+  # Find the outline of a binary image of a specific circle, and use minEnclosingCircle to predict the center of circle
+  # that is partly hidden behind an object.
+  def predict_circle_center2(self, mask):
+    kernel = np.ones((3, 3), np.uint8)
+    dilated_mask = cv2.dilate(mask, kernel, iterations=4)
+    #check whether circle is visible by checking its area:
+    M = cv2.moments(dilated_mask)
+    area = M['m00']
+    if (M['m00']==0):
+      #TODO: Tackle issue when its completely hidden
+      pass
+    #Find outline of the shape of the masked circle
+    contours, hierarchy = cv2.findContours(dilated_mask, 1, 2)
+    contour_poly = cv2.approxPolyDP(curve=contours[0], epsilon=0.1, closed=True)
+    #Using the outline, draw a circle that encloses the partial segment of the circle that is hidden
+    center, radius = cv2.minEnclosingCircle(contour_poly)
+    return np.array([int(center[0]), int(center[1])]) ,radius
+
   def detect_sphere_target2(self, img):
     # Turn RGB Image into HSV colour space
     hsv_image = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     # Detect Orange Targets
-    masks = cv2.inRange(hsv_image, (10, 5, 10), (24, 255, 255))
+    masks = cv2.inRange(hsv_image, (10, 0, 0), (24, 255, 255))
     kernel = np.ones((3, 3), np.uint8)
     dilated_mask = cv2.erode(masks, kernel, iterations=2)
+    # check whether circle is visible by checking its area:
+    M = cv2.moments(dilated_mask)
+    area = M['m00']
+    if (M['m00'] == 0):
+      # TODO: Tackle issue when its completely hidden
+      pass
     # Match template
     result = cv2.matchTemplate(dilated_mask, self.sphere_template, cv2.TM_SQDIFF_NORMED)
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
@@ -100,10 +125,12 @@ class image_converter_2:
 
     ##Task 2##
     masked_circles = self.detect_circles(self.cv_image2)
-    yellow_center = self.find_color_center2(masked_circles['Yellow'])
-    blue_center = self.find_color_center2(masked_circles['Blue'])
-    green_center = self.find_color_center2(masked_circles['Green'])
-    red_center = self.find_color_center2(masked_circles['Red'])
+    # Get Centers of each joint and end effector(red). 
+    yellow_center = self.predict_circle_center2(masked_circles['Yellow'])
+    blue_center = self.predict_circle_center2(masked_circles['Blue'])
+    green_center = self.predict_circle_center2(masked_circles['Green'])
+    red_center = self.predict_circle_center2(masked_circles['Red'])
+    # Get the position of center of taegrt sphere
     target_center= self.detect_sphere_target2(self.cv_image2)
 
 

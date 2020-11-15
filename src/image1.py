@@ -101,8 +101,16 @@ class image_converter_1:
   def predict_circle_center(self, mask):
     kernel = np.ones((3, 3), np.uint8)
     dilated_mask = cv2.dilate(mask, kernel, iterations=4)
+    #check whether circle is visible by checking its area:
+    M = cv2.moments(dilated_mask)
+    area = M['m00']
+    if (M['m00']==0):
+      #TODO: Tackle issue when its completely hidden
+      pass
+    #Find outline of the shape of the masked circle
     contours, hierarchy = cv2.findContours(dilated_mask, 1, 2)
     contour_poly = cv2.approxPolyDP(curve=contours[0], epsilon=0.1, closed=True)
+    #Using the outline, draw a circle that encloses the partial segment of the circle that is hidden
     center, radius = cv2.minEnclosingCircle(contour_poly)
     return np.array([int(center[0]), int(center[1])]) ,radius
 
@@ -114,6 +122,13 @@ class image_converter_1:
     masks = cv2.inRange(hsv_image, (10, 0, 0), (24, 255, 255))
     kernel = np.ones((3, 3), np.uint8)
     dilated_mask = cv2.erode(masks, kernel, iterations=2)
+    # check whether circle is visible by checking its area:
+    M = cv2.moments(dilated_mask)
+    area = M['m00']
+    if (M['m00'] == 0):
+      # TODO: Tackle issue when its completely hidden
+      pass
+
     #Match template - Slides the template over input image to detect where the target is
     result =cv2.matchTemplate(dilated_mask,self.sphere_template,cv2.TM_SQDIFF_NORMED)
     #Find min and maximum value from the outputted image

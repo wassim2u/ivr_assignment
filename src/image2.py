@@ -29,6 +29,9 @@ class image_converter_2:
     self.joint_centers_blue_pub2 = rospy.Publisher("/image2/joint_centers/blue", Float64MultiArray, queue_size=10)
     self.joint_centers_green_pub2 = rospy.Publisher("/image2/joint_centers/green", Float64MultiArray, queue_size=10)
     self.joint_centers_red_pub2 = rospy.Publisher("/image2/joint_centers/red", Float64MultiArray, queue_size=10)
+    self.target_center_pub2 = rospy.Publisher("/image2/target_center", Float64MultiArray, queue_size=10)
+
+    self.sphere_template = cv2.imread('src/ivr_assignment/sphere-template.png',0)
 
 
   # Return a dictionary that contains binary images for each circle
@@ -64,6 +67,25 @@ class image_converter_2:
     cz = int(M['m01'] / M['m00'])
     return np.array([cx, cz])
 
+  def detect_sphere_target2(self, img):
+    # Turn RGB Image into HSV colour space
+    hsv_image = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    # Detect Orange Targets
+    masks = cv2.inRange(hsv_image, (10, 5, 10), (24, 255, 255))
+    kernel = np.ones((3, 3), np.uint8)
+    dilated_mask = cv2.erode(masks, kernel, iterations=2)
+    # Match template
+    result = cv2.matchTemplate(dilated_mask, self.sphere_template, cv2.TM_SQDIFF_NORMED)
+    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+    width, height = self.sphere_template.shape[::-1]
+    top_left = min_loc
+    bottom_right = (top_left[0] + width, top_left[1] + height)
+
+    # Draw a rectangle on the original image
+    cv2.rectangle(img, top_left, bottom_right, 255, 2)
+    cv2.imshow("Detected Target - Image 2", img)
+    return np.array([min_loc[0] + width / 2, min_loc[1] + height / 2])
+
   # Recieve data, process it, and publish
   def callback2(self,data):
     # Recieve the image
@@ -82,6 +104,7 @@ class image_converter_2:
     blue_center = self.find_color_center2(masked_circles['Blue'])
     green_center = self.find_color_center2(masked_circles['Green'])
     red_center = self.find_color_center2(masked_circles['Red'])
+    target_center= self.detect_sphere_target2(self.cv_image2)
 
 
     self.y_center = Float64MultiArray()
@@ -92,6 +115,8 @@ class image_converter_2:
     self.g_center.data = green_center
     self.r_center = Float64MultiArray()
     self.r_center.data = red_center
+    self.target_sphere_center = Float64MultiArray()
+    self.target_sphere_center.data = target_center
 
 
 
@@ -103,6 +128,7 @@ class image_converter_2:
       self.joint_centers_blue_pub2.publish(self.b_center)
       self.joint_centers_green_pub2.publish(self.g_center)
       self.joint_centers_red_pub2.publish(self.r_center)
+      self.target_center_pub2.publish(self.target_sphere_center)
 
 
     except CvBridgeError as e:

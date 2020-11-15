@@ -36,7 +36,8 @@ class image_converter_1:
     self.joint_centers_green_pub1 = rospy.Publisher("/image1/joint_centers/green", Float64MultiArray, queue_size=10)
     self.joint_centers_red_pub1 = rospy.Publisher("/image1/joint_centers/red", Float64MultiArray, queue_size=10)
 
-
+    self.target_center_pub1 = rospy.Publisher("/image1/target_center", Float64MultiArray, queue_size=10)
+    self.sphere_template = cv2.imread('src/ivr_assignment/sphere-template.png',0)
 
 
   ###Functions to move joints 2-4 ###
@@ -94,22 +95,38 @@ class image_converter_1:
     return np.array([cy, cz])
 
 
-
+    #TODO: Solve edge case for thiss well when its completely hidden
   # Find the outline of a binary image of a specific circle, and use minEnclosingCircle to predict the center of circle
   # that is partly hidden behind an object.
-  def predict_circle_center(self, img, mask):
-    contours, hierarchy = cv2.findContours(mask, 1, 2)
+  def predict_circle_center(self, mask):
+    kernel = np.ones((3, 3), np.uint8)
+    dilated_mask = cv2.dilate(mask, kernel, iterations=4)
+    contours, hierarchy = cv2.findContours(dilated_mask, 1, 2)
     contour_poly = cv2.approxPolyDP(curve=contours[0], epsilon=0.1, closed=True)
     center, radius = cv2.minEnclosingCircle(contour_poly)
-    return np.array([int(center[0]), int(center[1])])
+    return np.array([int(center[0]), int(center[1])]) ,radius
 
-  # def detect_both_targets(self, img):
-  #   # Turn RGB Image into HSV colour space
-  #   hsv_image = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-  #   # Detect Orange Targets
-  #   masks = cv2.inRange(hsv_image, (15, 5, 10), (24, 255, 255))
-  #
-  #   return masks
+    #TODO: Deal with occlusion case
+  def detect_sphere_target(self, img):
+    # Turn RGB Image into HSV colour space
+    hsv_image = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    # Detect Orange Targets
+    masks = cv2.inRange(hsv_image, (10, 0, 0), (24, 255, 255))
+    kernel = np.ones((3, 3), np.uint8)
+    dilated_mask = cv2.erode(masks, kernel, iterations=2)
+    #Match template - Slides the template over input image to detect where the target is
+    result =cv2.matchTemplate(dilated_mask,self.sphere_template,cv2.TM_SQDIFF_NORMED)
+    #Find min and maximum value from the outputted image
+    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+    width, height = self.sphere_template.shape[::-1]
+    top_left = min_loc
+    bottom_right = (top_left[0] + width, top_left[1] + height)
+
+    #Draw a rectangle on the original image
+    cv2.rectangle(img,top_left, bottom_right, 255, 2)
+    cv2.imshow("Detected ", result)
+    cv2.imshow("Detected Target", img)
+    return np.array([min_loc[0]+width/2,min_loc[1]+height/2])
 
   # Draws the shape on the image. Call when needed for visualisation.
   def draw_boundary(self, img, mask):
@@ -121,10 +138,11 @@ class image_converter_1:
 
   # Draws a circle on the image. Call when needed for visualisation and to check result.
   def draw_circle_prediction(self, img, center, radius):
-    color = [255, 0, 0]
+    new_img = cv2.cvtColor(img,cv2.COLOR_GRAY2BGR)
+    color = [255, 23, 0]
     line_thickness = 2
-    cv2.circle(img, (int(center[0]), int(center[1])), int(radius), color, line_thickness)
-    cv2.imshow('Image with predicted shape of circle', img)
+    cv2.circle(new_img, (int(center[0]), int(center[1])), int(radius), color, line_thickness)
+    cv2.imshow('Image with predicted shape of circle', new_img)
     cv2.waitKey(1)
 
 
@@ -137,7 +155,7 @@ class image_converter_1:
       self.cv_image1 = self.bridge.imgmsg_to_cv2(data, "bgr8")
     except CvBridgeError as e:
       print(e)
-    
+
     # Uncomment if you want to save the image
     # cv2.imwrite('image1_copy.png', self.cv_image1)
 
@@ -147,10 +165,18 @@ class image_converter_1:
     ##Task 2##
 
     masked_circles_image1 = self.detect_circles(self.cv_image1)
-    yellow_center= self.find_color_center(masked_circles_image1['Yellow'])
-    blue_center= self.find_color_center(masked_circles_image1['Blue'])
-    green_center= self.find_color_center(masked_circles_image1['Green'])
-    red_center = self.find_color_center(masked_circles_image1['Red'])
+    # yellow_center= self.find_color_center(masked_circles_image1['Yellow'])
+    # blue_center= self.find_color_center(masked_circles_image1['Blue'])
+    # green_center= self.find_color_center(masked_circles_image1['Green'])
+    # red_center = self.find_color_center(masked_circles_image1['Red'])
+
+    yellow_center, y_radius = self.predict_circle_center(masked_circles_image1['Yellow'])
+    blue_center, bl_radius= self.predict_circle_center(masked_circles_image1['Blue'])
+    green_center, gr_radius= self.predict_circle_center(masked_circles_image1['Green'])
+    red_center, r_radius = self.predict_circle_center(masked_circles_image1['Red'])
+
+    target_center= self.detect_sphere_target(self.cv_image1)
+
 
     self.y_center = Float64MultiArray()
     self.y_center.data = yellow_center
@@ -160,6 +186,8 @@ class image_converter_1:
     self.g_center.data = green_center
     self.r_center = Float64MultiArray()
     self.r_center.data = red_center
+    self.target_sphere_center = Float64MultiArray()
+    self.target_sphere_center.data = target_center
 
 
     ########
@@ -171,9 +199,8 @@ class image_converter_1:
     self.joint3_angle = Float64()
     self.joint4_angle = Float64()
     self.joint2_angle.data, self.joint3_angle.data, self.joint4_angle.data = self.compute_joint_angles()
-
     # Publish the results
-    try: 
+    try:
       self.image_pub1.publish(self.bridge.cv2_to_imgmsg(self.cv_image1, "bgr8"))
       #publish new joint angles
       # self.joint2_pub.publish(self.joint2_angle)
@@ -185,6 +212,8 @@ class image_converter_1:
       self.joint_centers_blue_pub1.publish(self.b_center)
       self.joint_centers_green_pub1.publish(self.g_center)
       self.joint_centers_red_pub1.publish(self.r_center)
+      self.target_center_pub1.publish(self.target_sphere_center)
+
 
     except CvBridgeError as e:
       print(e)

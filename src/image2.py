@@ -31,6 +31,9 @@ class image_converter_2:
     self.joint_centers_green_pub2 = rospy.Publisher("/image2/joint_centers/green", Float64MultiArray, queue_size=10)
     self.joint_centers_red_pub2 = rospy.Publisher("/image2/joint_centers/red", Float64MultiArray, queue_size=10)
 
+  ##Code for task 4.1##
+  def is_visible(self, m):
+    return not(m==0)
 
   # Return a dictionary that contains binary images for each circle
   # Retrieve the image of a specific circle from the dictionary using their colour as key (eg. dictionary_name['Blue'])
@@ -61,9 +64,12 @@ class image_converter_2:
     dilated_mask = cv2.dilate(mask_color, kernel, iterations=3)
     M = cv2.moments(dilated_mask)
 
-    cx = int(M['m10'] / M['m00'])
-    cz = int(M['m01'] / M['m00'])
-    return np.array([cx, cz])
+    if (self.is_visible(M['m00'])):
+      cy = int(M['m10'] / M['m00'])
+      cz = int(M['m01'] / M['m00'])
+      return np.array([cy, cz])
+    
+    return np.array([0.0, 0.0])
 
   # Recieve data, process it, and publish
   def callback2(self,data):
@@ -73,17 +79,6 @@ class image_converter_2:
       cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
     except CvBridgeError as e:
       print(e)
-
-
-    ratio = convert_pixel_to_metres(cv_image)
-
-    e1_x, e1_y = get_end_effector(cv_image)
-    c1_x, c1_y = get_center(cv_image)
-    e1_x *= ratio
-    e1_y *= ratio
-    c1_x *= ratio
-    c1_y *= ratio
-    print(c1_x-e1_x, c1_y-e1_y)
 
     # Recieve the image
     try:

@@ -40,8 +40,9 @@ class image_converter_1:
     self.joint_centers_green_pub1 = rospy.Publisher("/image1/joint_centers/green", Float64MultiArray, queue_size=10)
     self.joint_centers_red_pub1 = rospy.Publisher("/image1/joint_centers/red", Float64MultiArray, queue_size=10)
 
-
-
+  ##Code for task 4.1##
+  def is_visible(self, m):
+    return not(m==0)
 
   ###Functions to move joints 2-4 ###
   def move_joint2(self, t):
@@ -52,51 +53,6 @@ class image_converter_1:
 
   def move_joint4(self, t):
     return (np.pi/2)*np.sin((np.pi/20.0)*t)
-
-  def compute_joint_angles(self):
-    time = np.array([rospy.get_time() - self.init_time])
-    joint2_angle = self.move_joint2(time)
-    joint3_angle = self.move_joint3(time)
-    joint4_angle = self.move_joint4(time)
-    return joint2_angle, joint3_angle, joint4_angle 
-
-  # Recieve data from camera 1, process it, and publish
-  def callback1(self,data):
-
-    try:
-      cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
-    except CvBridgeError as e:
-      print(e)
-
-    ratio = convert_pixel_to_metres(cv_image)
-
-    e1_x, e1_y = get_end_effector(cv_image)
-    c1_x, c1_y = get_center(cv_image)
-    e1_x *= ratio
-    e1_y *= ratio
-    c1_x *= ratio
-    c1_y *= ratio
-    print(c1_x-e1_x, c1_y-e1_y)
-
-    #update to current time
-    self.time = rospy.get_time()
-    joint2_angle, joint3_angle, joint4_angle = self.compute_joint_angles()
-
-    #print(self.forward_kinematics(0.0,0.0,0.0,1.0))
-
-    # Receive the image
-    try:
-      self.cv_image1 = self.bridge.imgmsg_to_cv2(data, "bgr8")
-      #publish new joint angles
-      #self.joint2_pub.publish(joint2_angle)
-      #self.joint3_pub.publish(joint3_angle)
-      #self.joint4_pub.publish(joint4_angle)
-    except CvBridgeError as e:
-      print(e)
-    
-    # Uncomment if you want to save the image 
-    #cv2.imwrite('image_copy.png', cv_image)
-=======
 
   #Return a dictionary that contains binary images for each circle
   #Retrieve the image of a specific circle from the dictionary using their colour as key (eg. dictionary_name['Blue'])
@@ -112,10 +68,10 @@ class image_converter_1:
     # Detect Yellow Circle
     yellow_mask = cv2.inRange(hsv_image, (28, 10, 20), (35, 255, 255))
 
-    # cv2.imshow('Red Circle - Binary Image', red_mask)
-    # cv2.imshow('Blue Circle - Binary Image', blue_mask)
-    # cv2.imshow('Green Circle - Binary Image', green_mask)
-    # cv2.imshow('Yellow Circle - Binary Image', yellow_mask)
+    #cv2.imshow('Red Circle - Binary Image', red_mask)
+    #cv2.imshow('Blue Circle - Binary Image', blue_mask)
+    #cv2.imshow('Green Circle - Binary Image', green_mask)
+    #cv2.imshow('Yellow Circle - Binary Image', yellow_mask)
     # cv2.waitKey(1)
 
     binary_images = {"Blue": blue_mask, "Green": green_mask, "Red": red_mask, "Yellow": yellow_mask}
@@ -130,9 +86,12 @@ class image_converter_1:
     dilated_mask = cv2.dilate(mask_color, kernel, iterations=3)
     M = cv2.moments(dilated_mask)
 
-    cy = int(M['m10'] / M['m00'])
-    cz = int(M['m01'] / M['m00'])
-    return np.array([cy, cz])
+    if (self.is_visible(M['m00'])):
+      cy = int(M['m10'] / M['m00'])
+      cz = int(M['m01'] / M['m00'])
+      return np.array([cy, cz])
+    
+    return np.array([0.0, 0.0])
 
 
 
@@ -181,7 +140,7 @@ class image_converter_1:
     
     # Uncomment if you want to save the image
     # cv2.imwrite('image1_copy.png', self.cv_image1)
-
+    #self.get_joint_positions()
 
     cv2.imshow('window1', self.cv_image1)
     cv2.waitKey(1)
@@ -212,7 +171,7 @@ class image_converter_1:
     self.joint2_angle = Float64()
     self.joint3_angle = Float64()
     self.joint4_angle = Float64()
-    self.joint2_angle.data, self.joint3_angle.data, self.joint4_angle.data = self.compute_joint_angles()
+    #self.joint2_angle.data, self.joint3_angle.data, self.joint4_angle.data = self.compute_joint_angles()
 
     # Publish the results
     try: 

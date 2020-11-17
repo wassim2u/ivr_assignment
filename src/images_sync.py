@@ -36,7 +36,7 @@ class images_sync:
     self.b_sub2 = message_filters.Subscriber("/image2/joint_centers/blue", Float64MultiArray)
     self.g_sub2 = message_filters.Subscriber("/image2/joint_centers/green", Float64MultiArray)
     self.r_sub2 = message_filters.Subscriber("/image2/joint_centers/red", Float64MultiArray)
-    self.
+    
     #initialize trajectory error
     self.error = np.array([0.0,0.0], dtype='float64') 
     self.init_time = rospy.get_time()

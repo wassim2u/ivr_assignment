@@ -12,6 +12,8 @@ from cv_bridge import CvBridge, CvBridgeError
 import message_filters
 
 
+import numpy.cos as cos
+import numpy.sin as sin
 
 class images_sync:
 
@@ -47,6 +49,11 @@ class images_sync:
                                                     ],
                                                      queue_size=10,slop= 0.1, allow_headerless=True)
     ts.registerCallback(self.callback)
+
+
+    self.previous_green = np.array([0,0,0])
+    self.initial = True
+
 
   #Note: Image 2 - xz plane; Image 1 - yz plane
   def create_new_3d_coordinates_from_data(self,y1,b1,g1,r1,target1,y2,b2,g2,r2,target2):
@@ -118,92 +125,17 @@ class images_sync:
     print("Values changed to meters:")
     print("Blue:"+ str(self.blue_3d))
     print("Green" + str(self.green_3d))
-
-  #TODO: Deal with prespective issue. Angles returned may be severely inaccurate because of the camera's perspective
-  def estimate_joint_angles_brute_force_green_blue(self):
-    xs = np.linspace(-np.pi / 2, np.pi / 2, 100)
-    ys = np.linspace(-np.pi / 2, np.pi / 2, 100)
-    print("GOAL: " + str(self.green_3d))
-    original_green_3d = self.blue_3d.copy()
-    original_green_3d[2] = original_green_3d[2] + 3.5
-    print("ORIGNAL: " + str(original_green_3d))
-
-
-    # self.green_3d[2] = self.green_center1[1]
-    for x in xs:
-      angle_x = x
-      x=-x
-      for y in ys:
-        y= -y
-
-        R_y_then_x = np.array([
-          [np.cos(y), 0, np.sin(y)],
-          [np.sin(x) * np.sin(y), np.cos(x), -np.sin(x) * np.cos(y)],
-          [-np.cos(x) * np.sin(y), np.sin(x), np.cos(x) * np.cos(y)]
-        ])
-
-        #TODO: SEE IF X THEN Y OR OPPOSITE
-        R_x_then_y = np.array([
-          [np.cos(y), np.sin(y) * np.sin(x), np.sin(y) * np.cos(x)],
-          [0, np.cos(x), -np.sin(x)],
-          [-np.sin(y), np.cos(y) * np.sin(x), np.cos(y) * np.cos(x)]
-        ])
-
-        expected_green_yx = R_y_then_x.dot(original_green_3d)
-        expected_green_xy = R_x_then_y.dot(original_green_3d)
-
-        # if y > -0.1 and y < 0.1 and x >= 1.5 and x < 1.6:
-        #   print(x)
-        #   print(expected_green_yx)
-        #   print(expected_green_xy)
-        #   print(self.green_3d)
-
-        if np.all(abs(expected_green_yx - self.green_3d) < 0.1):
-          return R_y_then_x, -x, -y
-        if np.all(abs(expected_green_xy - self.green_3d) < 0.1):
-
-          return R_x_then_y, -x, -y
-
-    return None, None, None
+    # r =np.array([(cos(a+b+c)+cos(a-b-c))/2,	-sin(b+c),	 (sin(a+b+c)+sin(a-b-c))/,	 (5*sin(a+b+c)+5*sin(a-b-c))/4
+    #     (sin(a+b+c)-sin(a-b-c))/2	 cos(b+c)	(-cos(a+b+c)+cos(a-b-c))/2	(-5*cos(a+b+c)+5*cos(a-b-c))/4
+    #               -sin(a)	        0	                    cos(a)	                (5*cos(a)+6)/2
+    #                     0	        0	                         0	                             1
+    #
+    # ]
+  def forward_kinematics(self):
+    pass
 
 
-  # Find angles that the vector makes with the x,y,and z axes
-  def find_direction_angles_green_blue(self):
-    x_distance = (self.blue_center2[0] - self.green_center2[0])
-    y_distance = (self.blue_center1[0] - self.green_center1[0])
-    z_distance = (self.z_blue - self.z_green)
-    print("DISTANCE:" + str(np.array([x_distance, y_distance, z_distance])))
 
-    ax = np.arccos(x_distance / (np.sqrt(pow(x_distance, 2) + pow(y_distance, 2) + pow(z_distance, 2))))
-    ay = np.arccos(y_distance / (np.sqrt(pow(x_distance, 2) + pow(z_distance, 2) + pow(y_distance, 2))))
-    az = np.arccos(z_distance / (np.sqrt(pow(x_distance, 2) + pow(y_distance, 2) + pow(z_distance, 2))))
-    result = (self.blue_3d.dot(self.green_3d)) / (
-            np.sqrt(self.blue_3d.dot(self.blue_3d.T)) * np.sqrt(self.green_3d.dot(self.green_3d.T)))
-    angle_between_vectors = np.arccos(result)
-    print(angle_between_vectors)
-    print(np.arctan2(x_distance, z_distance))
-    # print(np.arctan2(np.linalg.norm(np.cross(center_coords,blue_coords)),np.dot(center_coords,blue_coords)))
-    print(np.array([ax - np.pi / 2, ay - np.pi / 2, az]))
-    # print(angle_between_vectors)
-
-  #Testing purposes
-  def print_rotation_results_green_blue(self):
-    angle = -1.0
-
-    Rx = np.array([[1, 0, 0], [0, np.cos(angle), -np.sin(angle)], [0, np.sin(angle), np.cos(angle)]])
-    Ry = np.array([[np.cos(angle), 0, np.sin(angle)], [0, 1, 0], [-np.sin(angle), 0, np.cos(angle)]])
-    # print(Rx.dot(green_3d_unit) * np.linalg.norm(green_3d) )
-    # print(Rx)
-    # print(green_3d)
-    original_green_3d = self.blue_3d.copy()
-    original_green_3d[2] = original_green_3d[2] + 3.5
-    print("Inital Green Point Coordinates: " + str(original_green_3d))
-    print("Rotation around x-axis")
-    print(Rx @ original_green_3d)
-    print("Rotation around y-axis")
-    print(Ry @ original_green_3d)
-    print("Rotation around x-axis and y-axis")
-    print(Rx @ Ry @ original_green_3d)
 
   # Recieve data from both image_processing nodes corresponding to both cameras, process it, and publish
   # TODO: Alot needs to be changed. The processing part is incomplete. Dont forget to publish at the end too.
@@ -223,11 +155,6 @@ class images_sync:
     # print("Joint3: predicted y-rotation angle:" + str(y))
     # print("Rotation Matrix" + str(R))
     # # print("Multiplying to Rotation Matrix: " + str(R@[0,0,3.5]))
-    #
-    # print("Rotation")
-    # self.print_rotation_results_green_blue()
-    # self.find_direction_angles_green_blue()
-
 
 
 

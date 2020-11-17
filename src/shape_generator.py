@@ -64,8 +64,3 @@ def generate_circle(num, dim1, dim2, folder):
 
         draw.ellipse((x_top, y_left, x_top+height, y_left+width), fill='black')
         image.save(path)
-
-generate_squares(5000, 32,32, "../small_data/not_circle")
-generate_squares(20, 32,32, "../small_test_data")
-generate_circle(5000, 32,32, "../small_data/circle")
-generate_circle(20, 32,32, "../small_test_data")

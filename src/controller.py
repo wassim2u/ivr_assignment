@@ -144,9 +144,9 @@ class controller:
         print(self.z_yellow, self.z_blue, self.z_green, self.z_red)
 
     def get_jacobian(self, a, b, c, d):
-        #x = (-20*sin(a+b)-20*sin(a-b)+26*sin(a+b+d)-26*sin(a-b+d)+26*sin(a+c+d)-13*sin(a+b+c+d)-13*sin(a-b+c+d)-26*sin(a-c+d)-13*sin(a+b-c+d)-13*sin(a-b-c+d)-26*sin(a+b-d)+26*sin(a-b-d)+26*sin(a+c-d)-13*sin(a+b+c-d)-13*sin(a-b+c-d)-26*sin(a-c-d)-13*sin(a+b-c-d)-13*sin(a-b-c-d))/16
-        #y = (20*cos(a+b)+20*cos(a-b)-26*cos(a+b+d)+26*cos(a-b+d)-26*cos(a+c+d)+13*cos(a+b+c+d)+13*cos(a-b+c+d)+26*cos(a-c+d)+13*cos(a+b-c+d)+13*cos(a-b-c+d)+26*cos(a+b-d)-26*cos(a-b-d)-26*cos(a+c-d)+13*cos(a+b+c-d)+13*cos(a-b+c-d)+26*cos(a-c-d)+13*cos(a+b-c-d)+13*cos(a-b-c-d))/16
-        #z = (20*sin(b)-26*sin(b+d)+13*sin(b+c+d)+13*sin(b-c+d)+26*sin(b-d)+13*sin(b+c-d)+13*sin(b-c-d))/8
+        x = (-20*sin(a+b)-20*sin(a-b)+26*sin(a+b+d)-26*sin(a-b+d)+26*sin(a+c+d)-13*sin(a+b+c+d)-13*sin(a-b+c+d)-26*sin(a-c+d)-13*sin(a+b-c+d)-13*sin(a-b-c+d)-26*sin(a+b-d)+26*sin(a-b-d)+26*sin(a+c-d)-13*sin(a+b+c-d)-13*sin(a-b+c-d)-26*sin(a-c-d)-13*sin(a+b-c-d)-13*sin(a-b-c-d))/16
+        y = (20*cos(a+b)+20*cos(a-b)-26*cos(a+b+d)+26*cos(a-b+d)-26*cos(a+c+d)+13*cos(a+b+c+d)+13*cos(a-b+c+d)+26*cos(a-c+d)+13*cos(a+b-c+d)+13*cos(a-b-c+d)+26*cos(a+b-d)-26*cos(a-b-d)-26*cos(a+c-d)+13*cos(a+b+c-d)+13*cos(a-b+c-d)+26*cos(a-c-d)+13*cos(a+b-c-d)+13*cos(a-b-c-d))/16
+        z = (20*sin(b)-26*sin(b+d)+13*sin(b+c+d)+13*sin(b-c+d)+26*sin(b-d)+13*sin(b+c-d)+13*sin(b-c-d))/8
         return np.array([[x], [y], [z]])
     def callback(self,y1,b1,g1,r1,y2,b2,g2,r2):
 

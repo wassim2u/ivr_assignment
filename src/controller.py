@@ -25,16 +25,20 @@ class controller:
         self.b_sub1 = message_filters.Subscriber("/image1/joint_centers/blue", Float64MultiArray)
         self.g_sub1 = message_filters.Subscriber("/image1/joint_centers/green", Float64MultiArray)
         self.r_sub1 = message_filters.Subscriber("/image1/joint_centers/red", Float64MultiArray)
+        self.target_sub1 = message_filters.Subscriber("/image1/target_center", Float64MultiArray)
 
         self.y_sub2 = message_filters.Subscriber("/image2/joint_centers/yellow", Float64MultiArray)
         self.b_sub2 = message_filters.Subscriber("/image2/joint_centers/blue", Float64MultiArray)
         self.g_sub2 = message_filters.Subscriber("/image2/joint_centers/green", Float64MultiArray)
         self.r_sub2 = message_filters.Subscriber("/image2/joint_centers/red", Float64MultiArray)
+        self.target_sub2 = message_filters.Subscriber("/image2/target_center", Float64MultiArray)
+
         # synchronise incoming channels using the timestamps contained in their headers
         # slop defines the delay in seconds with which messages are synchronized
         ts = message_filters.ApproximateTimeSynchronizer([
                                                         self.y_sub1, self.b_sub1, self.g_sub1, self.r_sub1,
-                                                        self.y_sub2, self.b_sub2, self.g_sub2, self.r_sub2
+                                                        self.y_sub2, self.b_sub2, self.g_sub2, self.r_sub2,
+                                                        self.target_sub1, self.target_sub2
                                                         ],
                                                         queue_size=10,slop= 0.1, allow_headerless=True)
         ts.registerCallback(self.callback)
@@ -143,6 +147,61 @@ class controller:
 
         print(self.z_yellow, self.z_blue, self.z_green, self.z_red)
 
+        # Note: Image 2 - xz plane; Image 1 - yz plane
+
+    def create_new_3d_coordinates_from_data(self, y1, b1, g1, r1, y2, b2, g2, r2, target1, target2):
+        self.yellow_center1 = np.asarray(y1.data)
+        self.blue_center1 = np.asarray(b1.data)
+        self.green_center1 = np.asarray(g1.data)
+        self.red_center1 = np.asarray(r1.data)
+        self.target_center1 = np.asarray(target1.data)
+
+        self.yellow_center2 = np.asarray(y2.data)
+        self.blue_center2 = np.asarray(b2.data)
+        self.green_center2 = np.asarray(g2.data)
+        self.red_center2 = np.asarray(r2.data)
+        self.target_center2 = np.asarray(target2.data)
+
+        # blue and yellow should always on the same x and y-axis:
+        self.blue_center1[0] = self.yellow_center1[0]
+        self.blue_center2[0] = self.yellow_center2[0]
+
+        distance_blue_green_link1 = np.sqrt(np.sum((self.green_center1 - self.blue_center1) ** 2))
+        distance_blue_green_link2 = np.sqrt(np.sum((self.green_center2 - self.blue_center2) ** 2))
+        if distance_blue_green_link1 >= distance_blue_green_link2:
+            self.z_center = self.yellow_center1[1]
+            self.z_blue = self.blue_center1[1]
+            self.z_green = self.green_center1[1]
+            self.z_red = self.red_center1[1]
+        else:
+            self.z_center = self.yellow_center2[1]
+            self.z_blue = self.blue_center2[1]
+            self.z_green = self.green_center2[1]
+            self.z_red = self.red_center2[1]
+
+        self.yellow_3d = np.array([self.yellow_center2[0], self.yellow_center1[0], self.z_center])
+        self.blue_3d = np.array([self.blue_center2[0], self.blue_center1[0], self.z_blue])
+        self.green_3d = np.array([self.green_center2[0], self.green_center1[0], self.z_green])
+        self.red_3d = np.array([self.red_center2[0], self.red_center1[0], self.z_red])
+
+    def changeAxis(self):
+        new_yellow_3d = np.array([0, 0, 0])
+        new_blue_3d = self.yellow_3d - self.blue_3d
+        new_green_3d = self.yellow_3d - self.green_3d
+        new_red_3d = self.yellow_3d - self.red_3d
+        ratio = 0.0389
+        print("Ratio:" + str(ratio))
+        self.yellow_3d = new_yellow_3d
+        self.blue_3d = new_blue_3d * 0.0389
+        self.green_3d = new_green_3d * 0.0389
+        self.red_3d = new_red_3d * 0.0389
+        print("Values changed to meters:")
+        print("Yellow " + str(self.yellow_3d))
+        print("Blue:" + str(self.blue_3d))
+        print("Green" + str(self.green_3d))
+        print("Red" + str(self.red_3d))
+
+
     def get_jacobian(self, a, b, c, d):
         x = (26*cos(a+c+d)-26*cos(a-c+d)+26*cos(a+c-d)-26*cos(a-c-d)-20*sin(a+b)+20*sin(a-b)-26*sin(a+b+d)-26*sin(a-b+d)-13*sin(a+b+c+d)+13*sin(a-b+c+d)-13*sin(a+b-c+d)+13*sin(a-b-c+d)+26*sin(a+b-d)+26*sin(a-b-d)-13*sin(a+b+c-d)+13*sin(a-b+c-d)-13*sin(a+b-c-d)+13*sin(a-b-c-d))/16
         y = (20*cos(a+b)-20*cos(a-b)+26*cos(a+b+d)+26*cos(a-b+d)+13*cos(a+b+c+d)-13*cos(a-b+c+d)+13*cos(a+b-c+d)-13*cos(a-b-c+d)-26*cos(a+b-d)-26*cos(a-b-d)+13*cos(a+b+c-d)-13*cos(a-b+c-d)+13*cos(a+b-c-d)-13*cos(a-b-c-d)+26*sin(a+c+d)-26*sin(a-c+d)+26*sin(a+c-d)-26*sin(a-c-d))/16
@@ -151,14 +210,17 @@ class controller:
         #y = (20*cos(a+b)+20*cos(a-b)-26*cos(a+b+d)+26*cos(a-b+d)-26*cos(a+c+d)+13*cos(a+b+c+d)+13*cos(a-b+c+d)+26*cos(a-c+d)+13*cos(a+b-c+d)+13*cos(a-b-c+d)+26*cos(a+b-d)-26*cos(a-b-d)-26*cos(a+c-d)+13*cos(a+b+c-d)+13*cos(a-b+c-d)+26*cos(a-c-d)+13*cos(a+b-c-d)+13*cos(a-b-c-d))/16
         #z = (20*sin(b)-26*sin(b+d)+13*sin(b+c+d)+13*sin(b-c+d)+26*sin(b-d)+13*sin(b+c-d)+13*sin(b-c-d))/8
         return np.array([[x], [y], [z]])
-    def callback(self,y1,b1,g1,r1,y2,b2,g2,r2):
+    def callback(self,y1,b1,g1,r1,y2,b2,g2,r2,target1,target2):
 
         image_1_coordinates = np.array([y1, b1, g1, r1])
         image_2_coordinates = np.array([y2, b2, g2, r2])
         print(self.get_jacobian(0.0, 0.0, 0.0, 0.0))
-
         self.get_z(image_1_coordinates, image_2_coordinates)
-        
+
+        # Get coordinates from the two images and change the values to make them with respect to yellow center in meters
+        self.create_new_3d_coordinates_from_data(y1, b1, g1, r1, y2, b2, g2, r2,target1, target2)
+        self.changeAxis()
+
 
 # call the class
 def main(args):

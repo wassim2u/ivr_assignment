@@ -39,6 +39,7 @@ class images_sync:
     self.b_sub2 = message_filters.Subscriber("/image2/joint_centers/blue", Float64MultiArray)
     self.g_sub2 = message_filters.Subscriber("/image2/joint_centers/green", Float64MultiArray)
     self.r_sub2 = message_filters.Subscriber("/image2/joint_centers/red", Float64MultiArray)
+    self.target_sub2 = message_filters.Subscriber("/image2/target_center", Float64MultiArray)
 
     #initialize trajectory error
     self.error = np.array([0.0,0.0], dtype='float64') 
@@ -129,7 +130,18 @@ class images_sync:
     print("Values changed to meters:")
     print("Blue:"+ str(self.blue_3d))
     print("Green" + str(self.green_3d))
+    # r =np.array([(cos(a+b+c)+cos(a-b-c))/2,	-sin(b+c),	 (sin(a+b+c)+sin(a-b-c))/,	 (5*sin(a+b+c)+5*sin(a-b-c))/4
+    #     (sin(a+b+c)-sin(a-b-c))/2	 cos(b+c)	(-cos(a+b+c)+cos(a-b-c))/2	(-5*cos(a+b+c)+5*cos(a-b-c))/4
+    #               -sin(a)	        0	                    cos(a)	                (5*cos(a)+6)/2
+    #                     0	        0	                         0	                             1
+    #
+    # ]
+  def forward_kinematics(self):
+    pass
 
+
+
+<<<<<<< HEAD
   def forward_kinematics(self):
     # r =np.array([(cos(a+b+c)+cos(a-b-c))/2,	-sin(b+c),	 (sin(a+b+c)+sin(a-b-c))/,	 (5*sin(a+b+c)+5*sin(a-b-c))/4
     #     (sin(a+b+c)-sin(a-b-c))/2	 cos(b+c)	(-cos(a+b+c)+cos(a-b-c))/2	(-5*cos(a+b+c)+5*cos(a-b-c))/4
@@ -159,6 +171,8 @@ class images_sync:
 
   def closed_loop_control(self, theta1, theta2, theta3, theta4):
 
+=======
+>>>>>>> b140d5e608708f198cb0d734e7f520ce1889009d
 
   # Recieve data from both image_processing nodes corresponding to both cameras, process it, and publish
   # TODO: Alot needs to be changed. The processing part is incomplete. Dont forget to publish at the end too.

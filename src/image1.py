@@ -43,7 +43,7 @@ class image_converter_1:
 
     # These variables are used to keep track of target velocity to be used when approximating the next position of
     # target when it is not visible
-    self.is_target_detected = True
+    self.is_target_visible = True
     self.target_velocity_y = 0.0
     self.previous_target_ypos = np.array([0.0, 0.0], dtype='float64')
 
@@ -143,7 +143,7 @@ class image_converter_1:
     sphere_contour = contours[0]
     sphere_index =0
     box_index = 1
-    self.is_target_detected= False #Set to false.
+    self.is_target_visible= False
     #Predict which shape is the sphere
     for cnt in contours:
         #Find center of mass of our current contour.
@@ -164,9 +164,9 @@ class image_converter_1:
         if predictions[sphere_index] > predictions[box_index]:
           sphere_contour = cnt
           # Target shape has been detected
-          self.is_target_detected = True
+          self.is_target_visible = True
 
-    if (not self.is_target_detected):
+    if (not self.is_target_visible):
       #TODO: PRedict trajectory?
       pass
 
@@ -247,7 +247,7 @@ class image_converter_1:
 
     target_center= self.detect_sphere_target(self.cv_image1)
     #When the target can be detected from this camera, update the velocity and y_position of our target
-    if self.is_target_detected:
+    if self.is_target_visible:
       self.update_target_position_and_velocity(target_center[0])
 
     print(green_center)

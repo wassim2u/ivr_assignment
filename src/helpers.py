@@ -54,7 +54,7 @@ def threshold(cv_image, lower_range, upper_range):
     return mask
 
 def get_predictions(img):
-    cv2.imshow('window', img)
+    IMG_SIZE = 32 #Size changed to match Tensorflow model shape requirements
     img = cv2.resize(img, dsize=(32, 32))
 
     interpreter = tf.lite.Interpreter(model_path="src/ivr_assignment/target_model.tflite")
@@ -62,7 +62,7 @@ def get_predictions(img):
 
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
-   # add N dim and change to float
+    # add N dim and change to float
     img = np.asarray(img, dtype=np.float32)
     input_data = np.expand_dims(img, axis=0)
 
@@ -73,7 +73,6 @@ def get_predictions(img):
     output_data = interpreter.get_tensor(output_details[0]['index'])
     output_data = np.squeeze(output_data)
     #Output
-    print("PREDICTIONS" + str(output_data))
     return output_data
 
 

@@ -35,7 +35,7 @@ class image_converter_2:
 
     #These variables are used to keep track of target velocity to be used when approximating the next position of
     #target when it is not visible
-    self.is_target_detected = True
+    self.is_target_visible = True
     self.prev_time = np.array([rospy.get_time()], dtype='float64')
     self.target_velocity_y = 0.0
     self.previous_target_ypos = np.array([0.0, 0.0], dtype='float64')
@@ -118,7 +118,7 @@ class image_converter_2:
       sphere_contour = contours[0]
       sphere_index = 0
       box_index = 1
-      self.is_target_detected = False  # Set to false.
+      self.is_target_visible= False
       # Predict which shape is the sphere
       for cnt in contours:
         # Find center of mass of our current contour.
@@ -139,9 +139,9 @@ class image_converter_2:
         if predictions[sphere_index] > predictions[box_index]:
           sphere_contour = cnt
           # Target shape has been detected
-          self.is_target_detected = True
+          self.is_target_visible = True
 
-      if (not self.is_target_detected):
+      if (not self.is_target_visible):
         # TODO: PRedict trajectory?
         pass
 

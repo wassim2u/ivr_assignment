@@ -57,13 +57,7 @@ def threshold(cv_image, lower_range, upper_range):
 def get_predictions(img):
     IMG_SIZE = 32 #Size changed to match Tensorflow model shape requirements
     img = cv2.resize(img, dsize=(IMG_SIZE, IMG_SIZE))
-
-<<<<<<< HEAD
-
     interpreter = tf.lite.Interpreter(model_path=os.path.expanduser("~/catkin_ws/src/ivr_assignment/target_model.tflite"))
-=======
-    interpreter = tf.lite.Interpreter(model_path="/src/ivr_assignment/target_model.tflite")
->>>>>>> b1bc4848a29758d6037d96742e077a406755c657
     interpreter.allocate_tensors()
 
     input_details = interpreter.get_input_details()

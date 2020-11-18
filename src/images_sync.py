@@ -12,8 +12,8 @@ from cv_bridge import CvBridge, CvBridgeError
 import message_filters
 
 
-import numpy.cos as cos
-import numpy.sin as sin
+from numpy import cos
+from numpy import sin
 
 class images_sync:
 
@@ -107,7 +107,7 @@ class images_sync:
     self.blue_3d = np.array([self.blue_center2[0], self.blue_center1[0], self.z_blue])
     self.green_3d = np.array([self.green_center2[0], self.green_center1[0], self.z_green])
     self.red_3d = np.array([self.red_center2[0], self.red_center1[0], self.z_red])
-
+    print(self.red_3d)
 
   #Calculate the conversion from pixel to meter,
   # using the joints green and red and the length of the link (3 m) between them.
@@ -120,10 +120,12 @@ class images_sync:
 
   # TODO: Change axis for other centers as well.
   def changeAxis(self):
-    new_blue_3d = np.array([0, 0, 0])
-    new_green_3d = self.blue_3d - self.green_3d
+    new_yellow_3d = np.array([0,0,0])
+    new_blue_3d = self.yellow_3d - self.blue_3d
+    new_green_3d = self.yellow_3d - self.green_3d
     ratio = self.pixel2meter()
     print("Ratio:" + str(ratio))
+    self.yellow_3d = new_green_3d
     self.blue_3d = new_blue_3d * 0.0389
     self.green_3d = new_green_3d * 0.0389
     print("Values changed to meters:")
@@ -131,13 +133,14 @@ class images_sync:
     print("Green" + str(self.green_3d))
 
   def forward_kinematics(self):
-    # r =np.array([(cos(a+b+c)+cos(a-b-c))/2,	-sin(b+c),	 (sin(a+b+c)+sin(a-b-c))/,	 (5*sin(a+b+c)+5*sin(a-b-c))/4
+    # a03 =np.array([(cos(a+b+c)+cos(a-b-c))/2,	-sin(b+c),	 (sin(a+b+c)+sin(a-b-c))/,	 (5*sin(a+b+c)+5*sin(a-b-c))/4
     #     (sin(a+b+c)-sin(a-b-c))/2	 cos(b+c)	(-cos(a+b+c)+cos(a-b-c))/2	(-5*cos(a+b+c)+5*cos(a-b-c))/4
     #               -sin(a)	        0	                    cos(a)	                (5*cos(a)+6)/2
     #                     0	        0	                         0	                             1
     #
     # ]
     pass
+
 
 
 
@@ -158,6 +161,7 @@ class images_sync:
     # current_trajectory = np.array([image1])
 
   def closed_loop_control(self, theta1, theta2, theta3, theta4):
+    pass
 
 
   # Recieve data from both image_processing nodes corresponding to both cameras, process it, and publish
@@ -171,14 +175,43 @@ class images_sync:
 
     self.changeAxis()
 
-    # print("Brute Force- ")
-    # R, x, y = self.estimate_joint_angles_brute_force_green_blue()
-    # print("RESULTS:")
-    # print("Joint2: predicted x-rotation angle: " + str(x))
-    # print("Joint3: predicted y-rotation angle:" + str(y))
-    # print("Rotation Matrix" + str(R))
-    # # print("Multiplying to Rotation Matrix: " + str(R@[0,0,3.5]))
 
+   #a01:
+    # np.array([
+    #   [0,0,1,0],
+    #   [1,0,0,0],
+    #   [0,1,0,5/2],
+    #   [0,0,0,1]
+    # ])
+
+    # #a12:
+    #
+    # np.array([
+    #   [-sin(a),0,cos(a),0],
+    #   [cos(a),0,sin(a),0],
+    #   [0,1,0,0],
+    #   [0,0,0,1]
+    # ])
+
+    #a02:
+    # 0	cos(a)	-sin(a)	5*cos(a)/2
+    # 0	sin(a)	 cos(a)	5*sin(a)/2
+    # 1	     0	      0	         0
+    # 0	     0	      0	         1
+
+
+
+    print("Joint2")
+    print(np.arcsin((2/5)*(self.green_3d[0])))
+    print(np.arccos((-2/5)*(self.green_3d[2]-0.32-(2/5*2/7))) - np.pi/2)
+    print("Joint 3")
+
+
+# (cos(a+b)+cos(a-b))/2	-sin(b)	 (sin(a+b)+sin(a-b))/2	 (5*sin(a+b)+5*sin(a-b))/4
+# (sin(a+b)-sin(a-b))/2	 cos(b)	(-cos(a+b)+cos(a-b))/2	(-5*cos(a+b)+5*cos(a-b))/4
+#                sin(a)	      0	               -cos(a)	           (-5*cos(a)+7)/2
+#                     0	      0	                     0	                         1
+#
 
 
 

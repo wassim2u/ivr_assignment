@@ -86,7 +86,6 @@ class image_converter_1:
 
 
 
-  # <<<<<<< HEAD
   # Find center of a specific circle. The image returned from camera1 is of plane yz.
   # TODO: Tackle cases of 0 area where circle is completely hidden
   def find_color_center(self ,mask_color):
@@ -103,9 +102,7 @@ class image_converter_1:
 
 
 
-# =======
   #TODO: Solve edge case for thiss well when its completely hidden
-# >>>>>>> b140d5e608708f198cb0d734e7f520ce1889009d
   # Find the outline of a binary image of a specific circle, and use minEnclosingCircle to predict the center of circle
   # that is partly hidden behind an object.
   def predict_circle_center(self, mask):

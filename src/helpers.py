@@ -57,7 +57,7 @@ def get_predictions(img):
     IMG_SIZE = 32 #Size changed to match Tensorflow model shape requirements
     img = cv2.resize(img, dsize=(32, 32))
 
-    interpreter = tf.lite.Interpreter(model_path="src/ivr_assignment/target_model.tflite")
+    interpreter = tf.lite.Interpreter(model_path="/src/ivr_assignment/target_model.tflite")
     interpreter.allocate_tensors()
 
     input_details = interpreter.get_input_details()

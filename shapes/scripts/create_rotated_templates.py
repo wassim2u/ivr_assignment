@@ -9,7 +9,7 @@ output_sphere_folder_path = '../spheres/rotated'
 output_box_folder_path=  '../boxes/rotated'
 
 #Different angles to rotate
-angles = np.arange(1,360,1)
+angles = np.arange(1,360,60)
 
 
 def apply_rotation(image, angle):

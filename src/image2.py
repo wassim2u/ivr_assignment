@@ -46,13 +46,10 @@ class image_converter_2:
     self.previous_target_ypos = np.array([0.0, 0.0], dtype='float64')
 >>>>>>> b140d5e608708f198cb0d734e7f520ce1889009d
 
-    #When the joints are not visible, use the previous value of y to estimate its position.
-    self.previous_box_circularity = 0.77
-    self.previous_target_area = 0.0
 
     #These variables are used to keep track of target velocity to be used when approximating the next position of
     #target when it is not visible
-    self.is_target_detected = True
+    self.is_target_visible = True
     self.prev_time = np.array([rospy.get_time()], dtype='float64')
     self.target_velocity_y = 0.0
     self.previous_target_ypos = np.array([0.0, 0.0], dtype='float64')
@@ -124,83 +121,62 @@ class image_converter_2:
     masks = cv2.inRange(hsv_image, (10, 0, 0), (24, 255, 255))
     kernel = np.ones((3, 3), np.uint8)
     opening_mask = cv2.morphologyEx(masks, cv2.MORPH_OPEN, kernel)
-    cv2.imshow('window', opening_mask)
-
-    # check whether circle is visible by checking its area
-    M = cv2.moments(opening_mask)
-    area = M['m00']
     # Match template
-    center = self.match_sphere_template(img, opening_mask)
+    center = self.predict_sphere_center(img, opening_mask)
     return center
 
-  # Matches binary image with sphere template. Returns the center of the matched shape (which should be sphere).
-  def match_sphere_template(self, img, opening_mask):
-    # Match template
-    contours, hierarchy = cv2.findContours(opening_mask, 1, 1)
-    sphere_contour = contours[0]
-    circularities = []
-    areas = []
-    for c in contours:
-      area = cv2.contourArea(c)
-      areas.append(area)
-      perimeter = cv2.arcLength(c, closed=True)
-      circularity = 4 * np.pi * area / (perimeter ** 2)
-      print(circularity)
-      circularities.append(circularity)
+    # Returns the center of the matched shape with the help of classifer (which should be sphere).
+  def predict_sphere_center(self, img, opening_mask):
+      # Find outlines of our shapes inour binary images
+      contours, hierarchy = cv2.findContours(opening_mask, 1, 1)
+      sphere_contour = contours[0]
+      sphere_index = 0
+      box_index = 1
+      self.is_target_visible= False
+      # Predict which shape is the sphere
+      for cnt in contours:
+        # Find center of mass of our current contour.
+        M = cv2.moments(cnt)
+        cy = int(M["m10"] / M["m00"])
+        cz = int(M["m01"] / M["m00"])
+        # Take the current region of interest after finding its center.
+        IMG_SIZE = 36
+        current_shape = opening_mask[int(cz - IMG_SIZE / 2): int(cz + IMG_SIZE / 2),
+                        int(cy - IMG_SIZE / 2): int(cy + IMG_SIZE / 2)]
+        # Invert our region of interest to pass to classifer which is built on inverted images
+        current_shape = cv2.bitwise_not(current_shape)
+        # Increase the number of channels of our array in order to be able to process it in our classifier
+        current_shape = cv2.cvtColor(current_shape, cv2.COLOR_GRAY2BGR)
+        predictions = get_predictions(current_shape)
+        # If the predictions for the first index (which is the result that it is a sphere) is
+        # greater than the predictions for the second index (result that it is a box), then we have identified our target.
+        if predictions[sphere_index] > predictions[box_index]:
+          sphere_contour = cnt
+          # Target shape has been detected
+          self.is_target_visible = True
 
-    # If the object circularity sis less than a certain threshold( meaning we identified it as a box) and there's only
-    # one shape present, then the sphere is completely hidden.
-    if len(areas) == 1 and circularities[0] < 0.79:
-      # Predict target position using previous information
-      self.is_target_detected = False
-      return self.approximate_target_y_position()
-    elif len(areas) == 1 and circularities[0] > 0.79:
-      self.is_target_detected = True
-      sphere_contour=contours[0]
-    # Compare circularities and areas to identify which shape we are looking at.
-    else:
-      if circularities[0] > circularities[1]:
-        if circularities[0] > 0.77:
-          sphere_contour = contours[0]
-        elif abs(self.previous_target_area - areas[0]) > 2 and areas[0] > areas[1]:
-          self.previous_target_area = areas[0]
-          sphere_contour = contours[1]
-        else:
-          self.previous_target_area = areas[1]
-          sphere_contour = contours[0]
-      elif circularities[1] > circularities[0]:
-        if circularities[1] > 0.77:
-          sphere_contour = contours[1]
-        elif abs(self.previous_target_area - areas[1]) >2 and (areas[1] > areas[0]):
-          self.previous_target_area = areas[1]
-          sphere_contour = contours[0]
-        else:
-          self.previous_target_area = areas[0]
-          sphere_contour = contours[1]
+      if (not self.is_target_visible):
+        # TODO: PRedict trajectory?
+        pass
 
-    # Target shape has been detected
-    self.is_target_detected = True
+      contour_poly = cv2.approxPolyDP(curve=sphere_contour, epsilon=0.1, closed=True)
+      # Using the outline, draw a circle that encloses the partial segment of the circle that is hidden
+      center, radius = cv2.minEnclosingCircle(contour_poly)
+      # Draw outline of shape predicted to be a sphere to validate result
+      self.draw_circle_prediction(img, center, radius)
+      return center
 
-    contour_poly = cv2.approxPolyDP(curve=sphere_contour, epsilon=0.1, closed=True)
-    # Using the outline, draw a circle that encloses the partial segment of the circle that is hidden
-    center, radius = cv2.minEnclosingCircle(contour_poly)
-    # Draw outline of shape predicted to be a sphere to validate result
-    self.draw_circle_prediction(img, center, radius)
-    return center
-
-
-
-  def update_target_position_and_velocity(self,current_target_ypos):
+  def update_target_position_and_velocity(self,current_target_xpos):
     #Get the change in time
     current_time = rospy.get_time()
     dt = current_time - self.prev_time
     self.prev_time = current_time
     #Get displacement in y-direction and store the new target position
-    displacement=  current_target_ypos - self.previous_target_ypos
-    self.previous_target_ypos = current_target_ypos
+    displacement=  current_target_xpos - self.previous_target_xpos
+    self.previous_target_xpos = current_target_xpos
     #Calculate the velocity in the y-direction and store it
     current_velocity = displacement/ dt
-    self.target_velocity_y = current_velocity
+    self.target_velocity_x = current_velocity
 
   #When the target is not visible or cant be detected, calculate the predicted position of y using information
   #on its previous movement.
@@ -209,8 +185,8 @@ class image_converter_2:
     # Get the change in time
     current_time = rospy.get_time()
     dt = current_time - self.prev_time
-    predicted_y = self.target_velocity_y * dt + self.previous_target_ypos
-    return predicted_y
+    predicted_x = self.target_velocity_x * dt + self.previous_target_xpos
+    return predicted_x
 
   # Draws a circle on the image. Call when needed for visualisation and to check result.
   def draw_circle_prediction(self, img, center, radius):
@@ -351,14 +327,7 @@ class image_converter_2:
 
   # Recieve data, process it, and publish
   def callback2(self,data):
-    
-
-    try:
-      cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
-    except CvBridgeError as e:
-      print(e)
-
-    # Recieve the image
+    # Receive the image
     try:
       self.cv_image2 = self.bridge.imgmsg_to_cv2(data, "bgr8")
     except CvBridgeError as e:

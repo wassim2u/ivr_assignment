@@ -5,11 +5,13 @@ import sys
 import rospy
 import cv2
 import numpy as np
+import tensorflow as tf
 from numpy import sin, cos
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from std_msgs.msg import Float64MultiArray, Float64
 from cv_bridge import CvBridge, CvBridgeError
+
 
 def get_end_effector(cv_image):
     lower_red = np.array([0,0,100])
@@ -50,4 +52,29 @@ def threshold(cv_image, lower_range, upper_range):
     #create mask
     mask = cv2.inRange(cv_image, lower_range, upper_range)
     return mask
+
+def get_predictions(img):
+    IMG_SIZE = 32 #Size changed to match Tensorflow model shape requirements
+    img = cv2.resize(img, dsize=(32, 32))
+
+    interpreter = tf.lite.Interpreter(model_path="src/ivr_assignment/target_model.tflite")
+    interpreter.allocate_tensors()
+
+    input_details = interpreter.get_input_details()
+    output_details = interpreter.get_output_details()
+    # add N dim and change to float
+    img = np.asarray(img, dtype=np.float32)
+    input_data = np.expand_dims(img, axis=0)
+
+    interpreter.set_tensor(input_details[0]['index'], input_data)
+
+    interpreter.invoke()
+
+    output_data = interpreter.get_tensor(output_details[0]['index'])
+    output_data = np.squeeze(output_data)
+    #Output
+    return output_data
+
+
+
 

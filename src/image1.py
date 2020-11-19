@@ -314,8 +314,6 @@ class image_converter_1:
     if self.is_target_visible:
       self.update_target_position_and_velocity(target_center[0])
 
-
-
     self.y_center = Float64MultiArray()
     self.y_center.data = yellow_center
     self.b_center = Float64MultiArray()
@@ -327,6 +325,9 @@ class image_converter_1:
     self.target_sphere_center = Float64MultiArray()
     self.target_sphere_center.data = target_center
 
+    angle_str = "1.0472 -0.7854 1.5708 0.3491"
+    angle_split = angle_str.split()
+    angles = [float(i) for i in angle_split]
 
 
     # update to current time
@@ -339,10 +340,10 @@ class image_converter_1:
     try:
       self.image_pub1.publish(self.bridge.cv2_to_imgmsg(self.cv_image1, "bgr8"))
       #publish new joint angles
-      self.joint1_pub.publish(np.pi/4)
-      self.joint2_pub.publish(np.pi/4)
-      self.joint3_pub.publish(np.pi/4)
-      self.joint4_pub.publish(0.0)
+      self.joint1_pub.publish(angles[0])
+      self.joint2_pub.publish(angles[1])
+      self.joint3_pub.publish(angles[2])
+      self.joint4_pub.publish(angles[3])
 
       #publish joint centers with coordinates (y,z) taken from image 1
       self.joint_centers_yellow_pub1.publish(self.y_center)
@@ -354,6 +355,8 @@ class image_converter_1:
 
     except CvBridgeError as e:
       print(e)
+
+    cv2.imwrite('sample10_w1.png', self.cv_image1)
 
 # call the class
 def main(args):

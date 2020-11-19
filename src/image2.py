@@ -32,7 +32,6 @@ class image_converter_2:
     self.joint_centers_red_pub2 = rospy.Publisher("/image2/joint_centers/red", Float64MultiArray, queue_size=10)
     self.target_center_pub2 = rospy.Publisher("/image2/target_center", Float64MultiArray, queue_size=10)
 
-
     #These variables are used to keep track of target velocity to be used when approximating the next position of
     #target when it is not visible
     self.is_target_visible = True
@@ -320,9 +319,9 @@ class image_converter_2:
       print(e)
 
     # Uncomment if you want to save the image
-    #cv2.imwrite('image_copy.png', cv_image)
-    im2=cv2.imshow('window2', self.cv_image2)
-    cv2.waitKey(1)
+    cv2.imwrite('sample10_w2.png', self.cv_image2)
+    #im2=cv2.imshow('window2', self.cv_image2)
+    #cv2.waitKey(1)
 
     ##Task 2##
     masked_circles = self.detect_circles(self.cv_image2)
@@ -333,8 +332,6 @@ class image_converter_2:
     red_center, red_radius = self.predict_circle_center2(masked_circles['Red'])
     # Get the position of center of target sphere
     target_center= self.detect_sphere_target2(self.cv_image2)
-
-
 
     self.y_center = Float64MultiArray()
     self.y_center.data = yellow_center

@@ -204,27 +204,65 @@ class controller:
 
 
     def get_jacobian(self, a, b, c, d):
-        xx = (-7*cos(a+b+c)+7*cos(a-b+c)-7*cos(a+b-c)+7*cos(a-b-c)-6*cos(a+b+d)-6*cos(a-b+d)-3*cos(a+b+c+d)+3*cos(a-b+c+d)-3*cos(a+b-c+d)+3*cos(a-b-c+d)+6*cos(a+b-d)+6*cos(a-b-d)-3*cos(a+b+c-d)+3*cos(a-b+c-d)-3*cos(a+b-c-d)+3*cos(a-b-c-d)-14*sin(a+c)+14*sin(a-c)-6*sin(a+c+d)+6*sin(a-c+d)-6*sin(a+c-d)+6*sin(a-c-d))/8
-        yy = (14*cos(a+c)-14*cos(a-c)+6*cos(a+c+d)-6*cos(a-c+d)+6*cos(a+c-d)-6*cos(a-c-d)-7*sin(a+b+c)+7*sin(a-b+c)-7*sin(a+b-c)+7*sin(a-b-c)-6*sin(a+b+d)-6*sin(a-b+d)-3*sin(a+b+c+d)+3*sin(a-b+c+d)-3*sin(a+b-c+d)+3*sin(a-b-c+d)+6*sin(a+b-d)+6*sin(a-b-d)-3*sin(a+b+c-d)+3*sin(a-b+c-d)-3*sin(a+b-c-d)+3*sin(a-b-c-d))/8
+        #xx = (-7*cos(a+b+c)+7*cos(a-b+c)-7*cos(a+b-c)+7*cos(a-b-c)-6*cos(a+b+d)-6*cos(a-b+d)-3*cos(a+b+c+d)+3*cos(a-b+c+d)-3*cos(a+b-c+d)+3*cos(a-b-c+d)+6*cos(a+b-d)+6*cos(a-b-d)-3*cos(a+b+c-d)+3*cos(a-b+c-d)-3*cos(a+b-c-d)+3*cos(a-b-c-d)-14*sin(a+c)+14*sin(a-c)-6*sin(a+c+d)+6*sin(a-c+d)-6*sin(a+c-d)+6*sin(a-c-d))/8
+        #yy = (14*cos(a+c)-14*cos(a-c)+6*cos(a+c+d)-6*cos(a-c+d)+6*cos(a+c-d)-6*cos(a-c-d)-7*sin(a+b+c)+7*sin(a-b+c)-7*sin(a+b-c)+7*sin(a-b-c)-6*sin(a+b+d)-6*sin(a-b+d)-3*sin(a+b+c+d)+3*sin(a-b+c+d)-3*sin(a+b-c+d)+3*sin(a-b-c+d)+6*sin(a+b-d)+6*sin(a-b-d)-3*sin(a+b+c-d)+3*sin(a-b+c-d)-3*sin(a+b-c-d)+3*sin(a-b-c-d))/8
+        #zz = (7*cos(b+c)+7*cos(b-c)+6*cos(b+d)+3*cos(b+c+d)+3*cos(b-c+d)-6*cos(b-d)+3*cos(b+c-d)+3*cos(b-c-d)+10)/4
+        xx = (-7*cos(a+b+c)+7*cos(a-b+c)-7*cos(a+b-c)+7*cos(a-b-c)-6*cos(a+b+d)-6*cos(a-b+d)-3*cos(a+b+c+d)+3*cos(a-b+c+d)-3*cos(a+b-c+d)+3*cos(a-b-c+d)+6*cos(a+b-d)+6*cos(a-b-d)-3*cos(a+b+c-d)+3*cos(a-b+c-d)-3*cos(a+b-c-d)+3*cos(a-b-c-d)+14*sin(a+c)-14*sin(a-c)+6*sin(a+c+d)-6*sin(a-c+d)+6*sin(a+c-d)-6*sin(a-c-d))/8
+        yy = (-14*cos(a+c)+14*cos(a-c)-6*cos(a+c+d)+6*cos(a-c+d)-6*cos(a+c-d)+6*cos(a-c-d)-7*sin(a+b+c)+7*sin(a-b+c)-7*sin(a+b-c)+7*sin(a-b-c)-6*sin(a+b+d)-6*sin(a-b+d)-3*sin(a+b+c+d)+3*sin(a-b+c+d)-3*sin(a+b-c+d)+3*sin(a-b-c+d)+6*sin(a+b-d)+6*sin(a-b-d)-3*sin(a+b+c-d)+3*sin(a-b+c-d)-3*sin(a+b-c-d)+3*sin(a-b-c-d))/8
         zz = (7*cos(b+c)+7*cos(b-c)+6*cos(b+d)+3*cos(b+c+d)+3*cos(b-c+d)-6*cos(b-d)+3*cos(b+c-d)+3*cos(b-c-d)+10)/4
-        return np.array([[xx], [yy], [zz]])
+        return [xx, yy, zz]
+
+    #Generates angles for the robot in accordance with task 2.1
+    def task_2_1(self):
+
+        angles_file = open("../angles.txt", "w")
+        readings_file = open("../readings.txt", "w")
+        
+        for i in range(10):
+            theta1 = 0
+            theta2 = 0
+            theta3 = 0
+            theta4 = 0
+
+            while (theta1 == 0 or abs(theta1) == 1  or theta2 == 0 or abs(theta2) == 1 or theta3 == 0 or abs(theta3) == 1 or theta4 == 0 or abs(theta4) == 1):
+                theta1 = random.randint(-10, 10)
+                theta2 = random.randint(-10, 10)
+                theta3 = random.randint(-10, 10)
+                theta4 = random.randint(-10, 10)
+
+            theta1 = np.pi/(theta1)
+            theta2 = np.pi/(theta2)
+            theta3 = np.pi/(theta3)
+            theta4 = np.pi/(theta4)
+
+            angles_file.write("%.4f %.4f %.4f %.4f\n" %(theta1, theta2, theta3, theta4))
+
+            readings = self.get_jacobian(theta1, theta2, theta3, theta4)
+            readings_file.write("%.4f %.4f %.4f\n" %(readings[0], readings[1], readings[2]))
+
+        readings_file.close()
+        angles_file.close()
+        print("Successfully written to files.")
+
+            
 
     def callback(self,y1,b1,g1,r1,y2,b2,g2,r2, target1, target2):
 
         image_1_coordinates = np.array([y1, b1, g1, r1])
         image_2_coordinates = np.array([y2, b2, g2, r2])
-        print(self.get_jacobian(np.pi/4, np.pi/4, 0.0, 0.0))
+        self.task_2_1()
 
         self.get_z(image_1_coordinates, image_2_coordinates)
 
         # Get coordinates from the two images and change the values to make them with respect to yellow center in meters
-        self.create_new_3d_coordinates_from_data(y1, b1, g1, r1, y2, b2, g2, r2,target1, target2)
-        self.changeAxis()
+        #self.create_new_3d_coordinates_from_data(y1, b1, g1, r1, y2, b2, g2, r2,target1, target2)
+        #self.changeAxis()
 
 
 # call the class
 def main(args):
   cntr = controller()
+  cntr.task_2_1()
   try:
     rospy.spin()
   except KeyboardInterrupt:

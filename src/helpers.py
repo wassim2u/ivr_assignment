@@ -75,6 +75,15 @@ def get_predictions(img):
     #Output
     return output_data
 
+def metres_to_pixels(metres, cv_image):
+  ratio = 1 /convert_pixel_to_metres(cv_image)
+  return ratio*metres
+
+def change_frame(y, z, center_y, center_z):
+  point = np.array([[0.], [y], [z], [1.]])
+  transformation = np.array([[1.,0.,0.,0.],[0., np.cos(np.pi), -np.sin(np.pi), -center_y*np.cos(np.pi)],[np.sin(np.pi), np.cos(np.pi), -center_y*np.sin(np.pi)-center_z*np.cos(np.pi)],[0.,0.,0.,1.]])
+  return np.dot(transformation, point)
+
 
 
 

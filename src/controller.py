@@ -144,15 +144,40 @@ class controller:
         print(self.z_yellow, self.z_blue, self.z_green, self.z_red)
 
     def get_jacobian(self, a, b, c, d):
-        x = (-20*sin(a+b)-20*sin(a-b)+26*sin(a+b+d)-26*sin(a-b+d)+26*sin(a+c+d)-13*sin(a+b+c+d)-13*sin(a-b+c+d)-26*sin(a-c+d)-13*sin(a+b-c+d)-13*sin(a-b-c+d)-26*sin(a+b-d)+26*sin(a-b-d)+26*sin(a+c-d)-13*sin(a+b+c-d)-13*sin(a-b+c-d)-26*sin(a-c-d)-13*sin(a+b-c-d)-13*sin(a-b-c-d))/16
-        y = (20*cos(a+b)+20*cos(a-b)-26*cos(a+b+d)+26*cos(a-b+d)-26*cos(a+c+d)+13*cos(a+b+c+d)+13*cos(a-b+c+d)+26*cos(a-c+d)+13*cos(a+b-c+d)+13*cos(a-b-c+d)+26*cos(a+b-d)-26*cos(a-b-d)-26*cos(a+c-d)+13*cos(a+b+c-d)+13*cos(a-b+c-d)+26*cos(a-c-d)+13*cos(a+b-c-d)+13*cos(a-b-c-d))/16
-        z = (20*sin(b)-26*sin(b+d)+13*sin(b+c+d)+13*sin(b-c+d)+26*sin(b-d)+13*sin(b+c-d)+13*sin(b-c-d))/8
-        return np.array([[x], [y], [z]])
+        #x = (-26*cos(a+c+d)+26*cos(a-c+d)-26*cos(a+c-d)+26*cos(a-c-d)-20*sin(a+b)+20*sin(a-b)+26*sin(a+b+d)+26*sin(a-b+d)-13*sin(a+b+c+d)+13*sin(a-b+c+d)-13*sin(a+b-c+d)+13*sin(a-b-c+d)-26*sin(a+b-d)-26*sin(a-b-d)-13*sin(a+b+c-d)+13*sin(a-b+c-d)-13*sin(a+b-c-d)+13*sin(a-b-c-d))/16
+        #x = (-20*sin(a+b)-20*sin(a-b)+26*sin(a+b+d)-26*sin(a-b+d)+26*sin(a+c+d)-13*sin(a+b+c+d)-13*sin(a-b+c+d)-26*sin(a-c+d)-13*sin(a+b-c+d)-13*sin(a-b-c+d)-26*sin(a+b-d)+26*sin(a-b-d)+26*sin(a+c-d)-13*sin(a+b+c-d)-13*sin(a-b+c-d)-26*sin(a-c-d)-13*sin(a+b-c-d)-13*sin(a-b-c-d))/16
+        # y = (20*cos(a+b)-20*cos(a-b)-26*cos(a+b+d)-26*cos(a-b+d)+13*cos(a+b+c+d)-13*cos(a-b+c+d)+13*cos(a+b-c+d)-13*cos(a-b-c+d)+26*cos(a+b-d)+26*cos(a-b-d)+13*cos(a+b+c-d)-13*cos(a-b+c-d)+13*cos(a+b-c-d)-13*cos(a-b-c-d)-26*sin(a+c+d)+26*sin(a-c+d)-26*sin(a+c-d)+26*sin(a-c-d))/16
+        #y = (20*cos(a+b)+20*cos(a-b)-26*cos(a+b+d)+26*cos(a-b+d)-26*cos(a+c+d)+13*cos(a+b+c+d)+13*cos(a-b+c+d)+26*cos(a-c+d)+13*cos(a+b-c+d)+13*cos(a-b-c+d)+26*cos(a+b-d)-26*cos(a-b-d)-26*cos(a+c-d)+13*cos(a+b+c-d)+13*cos(a-b+c-d)+26*cos(a-c-d)+13*cos(a+b-c-d)+13*cos(a-b-c-d))/16
+        #z = (20*cos(b)-26*cos(b+d)+13*cos(b+c+d)+13*cos(b-c+d)+26*cos(b-d)+13*cos(b+c-d)+13*cos(b-c-d))/8
+        #z = (20*sin(b)-26*sin(b+d)+13*sin(b+c+d)+13*sin(b-c+d)+26*sin(b-d)+13*sin(b+c-d)+13*sin(b-c-d))/8
+        #xx = (7*sin(y+z)+7*sin(y-z))/4
+        #yy = (-20*sin(x)-14*sin(x+z)-7*sin(x+y+z)-7*sin(x-y+z)+14*sin(x-z)-7*sin(x+y-z)-7*sin(x-y-z))/8
+        #zz = (20*cos(x)+14*cos(x+z)+7*cos(x+y+z)+7*cos(x-y+z)-14*cos(x-z)+7*cos(x+y-z)+7*cos(x-y-z))/8
+        #xx = (-20*cos(a+b)+20*cos(a-b)+26*cos(a+b+d)+26*cos(a-b+d)-13*cos(a+b+c+d)+13*cos(a-b+c+d)-13*cos(a+b-c+d)+13*cos(a-b-c+d)-26*cos(a+b-d)-26*cos(a-b-d)-13*cos(a+b+c-d)+13*cos(a-b+c-d)-13*cos(a+b-c-d)+13*cos(a-b-c-d)+26*sin(a+c+d)-26*sin(a-c+d)+26*sin(a+c-d)-26*sin(a-c-d))/16
+        #yy = (-26*cos(a+c+d)+26*cos(a-c+d)-26*cos(a+c-d)+26*cos(a-c-d)-20*sin(a+b)+20*sin(a-b)+26*sin(a+b+d)+26*sin(a-b+d)-13*sin(a+b+c+d)+13*sin(a-b+c+d)-13*sin(a+b-c+d)+13*sin(a-b-c+d)-26*sin(a+b-d)-26*sin(a-b-d)-13*sin(a+b+c-d)+13*sin(a-b+c-d)-13*sin(a+b-c-d)+13*sin(a-b-c-d))/16
+        #zz = (20*cos(b)-26*cos(b+d)+13*cos(b+c+d)+13*cos(b-c+d)+26*cos(b-d)+13*cos(b+c-d)+13*cos(b-c-d))/8
+        #print(np.array([[a], [b], [c]]))
+        #xx = (20*sin(a+b)+20*sin(a-b)-26*sin(a+b+d)+26*sin(a-b+d)+26*sin(a+c+d)+13*sin(a+b+c+d)+13*sin(a-b+c+d)-26*sin(a-c+d)+13*sin(a+b-c+d)+13*sin(a-b-c+d)+26*sin(a+b-d)-26*sin(a-b-d)+26*sin(a+c-d)+13*sin(a+b+c-d)+13*sin(a-b+c-d)-26*sin(a-c-d)+13*sin(a+b-c-d)+13*sin(a-b-c-d))/16
+        #yy = (-20*cos(a+b)-20*cos(a-b)+26*cos(a+b+d)-26*cos(a-b+d)-26*cos(a+c+d)-13*cos(a+b+c+d)-13*cos(a-b+c+d)+26*cos(a-c+d)-13*cos(a+b-c+d)-13*cos(a-b-c+d)-26*cos(a+b-d)+26*cos(a-b-d)-26*cos(a+c-d)-13*cos(a+b+c-d)-13*cos(a-b+c-d)+26*cos(a-c-d)-13*cos(a+b-c-d)-13*cos(a-b-c-d))/16
+        #zz = (-20*sin(b)+26*sin(b+d)-13*sin(b+c+d)-13*sin(b-c+d)-26*sin(b-d)-13*sin(b+c-d)-13*sin(b-c-d))/8
+        #xx = (-20*cos(a+b)+20*cos(a-b)+26*cos(a+b+d)+26*cos(a-b+d)-13*cos(a+b+c+d)+13*cos(a-b+c+d)-13*cos(a+b-c+d)+13*cos(a-b-c+d)-26*cos(a+b-d)-26*cos(a-b-d)-13*cos(a+b+c-d)+13*cos(a-b+c-d)-13*cos(a+b-c-d)+13*cos(a-b-c-d)+26*sin(a+c+d)-26*sin(a-c+d)+26*sin(a+c-d)-26*sin(a-c-d))/16
+        #yy = (-26*cos(a+c+d)+26*cos(a-c+d)-26*cos(a+c-d)+26*cos(a-c-d)-20*sin(a+b)+20*sin(a-b)+26*sin(a+b+d)+26*sin(a-b+d)-13*sin(a+b+c+d)+13*sin(a-b+c+d)-13*sin(a+b-c+d)+13*sin(a-b-c+d)-26*sin(a+b-d)-26*sin(a-b-d)-13*sin(a+b+c-d)+13*sin(a-b+c-d)-13*sin(a+b-c-d)+13*sin(a-b-c-d))/16
+        #zz = (20*cos(b)-26*cos(b+d)+13*cos(b+c+d)+13*cos(b-c+d)+26*cos(b-d)+13*cos(b+c-d)+13*cos(b-c-d))/8
+        #xx = (-20*cos(a+b)+20*cos(a-b)-26*cos(a+b+d)-26*cos(a-b+d)-13*cos(a+b+c+d)+13*cos(a-b+c+d)-13*cos(a+b-c+d)+13*cos(a-b-c+d)+26*cos(a+b-d)+26*cos(a-b-d)-13*cos(a+b+c-d)+13*cos(a-b+c-d)-13*cos(a+b-c-d)+13*cos(a-b-c-d)+26*sin(a+c+d)-26*sin(a-c+d)+26*sin(a+c-d)-26*sin(a-c-d))/16
+        #yy = (-26*cos(a+c+d)+26*cos(a-c+d)-26*cos(a+c-d)+26*cos(a-c-d)-20*sin(a+b)+20*sin(a-b)-26*sin(a+b+d)-26*sin(a-b+d)-13*sin(a+b+c+d)+13*sin(a-b+c+d)-13*sin(a+b-c+d)+13*sin(a-b-c+d)+26*sin(a+b-d)+26*sin(a-b-d)-13*sin(a+b+c-d)+13*sin(a-b+c-d)-13*sin(a+b-c-d)+13*sin(a-b-c-d))/16
+        #zz = (20*cos(b)+26*cos(b+d)+13*cos(b+c+d)+13*cos(b-c+d)-26*cos(b-d)+13*cos(b+c-d)+13*cos(b-c-d))/8
+        xx = (-10*cos(a+b)+10*cos(a-b)-7*cos(a+b+c)+7*cos(a-b+c)-7*cos(a+b-c)+7*cos(a-b-c)-6*cos(a+b+d)-6*cos(a-b+d)-3*cos(a+b+c+d)+3*cos(a-b+c+d)-3*cos(a+b-c+d)+3*cos(a-b-c+d)+6*cos(a+b-d)+6*cos(a-b-d)-3*cos(a+b+c-d)+3*cos(a-b+c-d)-3*cos(a+b-c-d)+3*cos(a-b-c-d)-14*sin(a+c)+14*sin(a-c)-6*sin(a+c+d)+6*sin(a-c+d)-6*sin(a+c-d)+6*sin(a-c-d))/8
+        yy = (14*cos(a+c)-14*cos(a-c)+6*cos(a+c+d)-6*cos(a-c+d)+6*cos(a+c-d)-6*cos(a-c-d)-10*sin(a+b)+10*sin(a-b)-7*sin(a+b+c)+7*sin(a-b+c)-7*sin(a+b-c)+7*sin(a-b-c)-6*sin(a+b+d)-6*sin(a-b+d)-3*sin(a+b+c+d)+3*sin(a-b+c+d)-3*sin(a+b-c+d)+3*sin(a-b-c+d)+6*sin(a+b-d)+6*sin(a-b-d)-3*sin(a+b+c-d)+3*sin(a-b+c-d)-3*sin(a+b-c-d)+3*sin(a-b-c-d))/8
+        zz = (10*cos(b)+7*cos(b+c)+7*cos(b-c)+6*cos(b+d)+3*cos(b+c+d)+3*cos(b-c+d)-6*cos(b-d)+3*cos(b+c-d)+3*cos(b-c-d))/4
+        return np.array([[xx], [yy], [zz]])
     def callback(self,y1,b1,g1,r1,y2,b2,g2,r2):
 
         image_1_coordinates = np.array([y1, b1, g1, r1])
         image_2_coordinates = np.array([y2, b2, g2, r2])
         print(self.get_jacobian(0.0, 0.0, 0.0, 0.0))
+        print(self.get_jacobian(0.0, 0.0, 0.0, np.pi/4))
+        print(self.get_jacobian(0.0, 0.0, 0.0, np.pi/2))
+        print(self.get_jacobian(0.0, 0.0, np.pi/4, 0.0))
 
         self.get_z(image_1_coordinates, image_2_coordinates)
         

@@ -39,36 +39,18 @@ class image_converter_1:
     self.joint_centers_blue_pub1 = rospy.Publisher("/image1/joint_centers/blue", Float64MultiArray, queue_size=10)
     self.joint_centers_green_pub1 = rospy.Publisher("/image1/joint_centers/green", Float64MultiArray, queue_size=10)
     self.joint_centers_red_pub1 = rospy.Publisher("/image1/joint_centers/red", Float64MultiArray, queue_size=10)
-<<<<<<< HEAD
-
-<<<<<<< HEAD
-<<<<<<< HEAD
-  ##Code for task 4.1##
-  def is_visible(self, m):
-    return not(m==0)
-=======
-=======
->>>>>>> b140d5e608708f198cb0d734e7f520ce1889009d
-=======
->>>>>>> 19dc3ef7d095d6cdcc07ed725deffd3fa19dc737
     self.target_center_pub1 = rospy.Publisher("/image1/target_center", Float64MultiArray, queue_size=10)
 
-    # These variables are used to keep track of target velocity to be used when approximating the next position of
-    # target when it is not visible
+    #These variables are used to keep track of target velocity to be used when approximating the next position of
+    #target when it is not visible
     self.is_target_visible = True
+    self.prev_time = np.array([rospy.get_time()], dtype='float64')
     self.target_velocity_y = 0.0
     self.previous_target_ypos = np.array([0.0, 0.0], dtype='float64')
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> b140d5e608708f198cb0d734e7f520ce1889009d
-=======
->>>>>>> b140d5e608708f198cb0d734e7f520ce1889009d
-=======
 
   ##Code for task 4.1##
   def is_visible(self, m):
     return not(m==0)
->>>>>>> 19dc3ef7d095d6cdcc07ed725deffd3fa19dc737
 
     ###Functions to move joints 2-4 ###
   def move_joint2(self, t):
@@ -103,14 +85,6 @@ class image_converter_1:
     binary_images = {"Blue": blue_mask, "Green": green_mask, "Red": red_mask, "Yellow": yellow_mask}
     return binary_images
 
-
-
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-  # <<<<<<< HEAD
->>>>>>> 19dc3ef7d095d6cdcc07ed725deffd3fa19dc737
   # Find center of a specific circle. The image returned from camera1 is of plane yz.
   # TODO: Tackle cases of 0 area where circle is completely hidden
   def find_color_center(self ,mask_color):
@@ -125,18 +99,8 @@ class image_converter_1:
     
     return np.array([0.0, 0.0])
 
-
-
-# =======
   #TODO: Solve edge case for thiss well when its completely hidden
-<<<<<<< HEAD
->>>>>>> b140d5e608708f198cb0d734e7f520ce1889009d
-=======
-  #TODO: Solve edge case for thiss well when its completely hidden
->>>>>>> b140d5e608708f198cb0d734e7f520ce1889009d
-=======
-# >>>>>>> b140d5e608708f198cb0d734e7f520ce1889009d
->>>>>>> 19dc3ef7d095d6cdcc07ed725deffd3fa19dc737
+
   # Find the outline of a binary image of a specific circle, and use minEnclosingCircle to predict the center of circle
   # that is partly hidden behind an object.
   def predict_circle_center(self, mask):
@@ -152,7 +116,7 @@ class image_converter_1:
     contours, hierarchy = cv2.findContours(dilated_mask, 1, 2)
     contour_poly = cv2.approxPolyDP(curve=contours[0], epsilon=0.1, closed=True)
     #Using the outline, draw a circle that encloses the partial segment of the circle that is hidden
-<<<<<<< HEAD
+
     center, radius = cv2.minEnclosingCircle(contour_poly)
     return np.array([int(center[0]), int(center[1])]) ,radius
 
@@ -220,8 +184,6 @@ class image_converter_1:
     contour_poly = cv2.approxPolyDP(curve=sphere_contour, epsilon=0.1, closed=True)
     # Using the outline, draw a circle that encloses the partial segment of the circle that is hidden
     center, radius = cv2.minEnclosingCircle(contour_poly)
-=======
-    center, radius = cv2.minEnclosingCircle(contour_poly)
     return np.array([int(center[0]), int(center[1])]) ,radius
 
     #TODO: Deal with occlusion case
@@ -273,7 +235,6 @@ class image_converter_1:
     contour_poly = cv2.approxPolyDP(curve=sphere_contour, epsilon=0.1, closed=True)
     # Using the outline, draw a circle that encloses the partial segment of the circle that is hidden
     center, radius = cv2.minEnclosingCircle(contour_poly)
->>>>>>> b140d5e608708f198cb0d734e7f520ce1889009d
     #Draw outline of shape predicted to be a sphere to validate result
     self.draw_circle_prediction(img,center,radius)
     return center
@@ -351,9 +312,6 @@ class image_converter_1:
     if self.is_target_visible:
       self.update_target_position_and_velocity(target_center[0])
 
-    print(green_center)
-
-
 
 
     self.y_center = Float64MultiArray()
@@ -368,7 +326,6 @@ class image_converter_1:
     self.target_sphere_center.data = target_center
 
 
-    ########
 
     # update to current time
     self.time = rospy.get_time()
@@ -376,20 +333,6 @@ class image_converter_1:
     self.joint2_angle = Float64()
     self.joint3_angle = Float64()
     self.joint4_angle = Float64()
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-    #self.joint2_angle.data, self.joint3_angle.data, self.joint4_angle.data = self.compute_joint_angles()
-
-=======
-    self.joint2_angle.data, self.joint3_angle.data, self.joint4_angle.data = self.compute_joint_angles()
->>>>>>> b140d5e608708f198cb0d734e7f520ce1889009d
-=======
-    self.joint2_angle.data, self.joint3_angle.data, self.joint4_angle.data = self.compute_joint_angles()
->>>>>>> b140d5e608708f198cb0d734e7f520ce1889009d
-=======
-
->>>>>>> 19dc3ef7d095d6cdcc07ed725deffd3fa19dc737
     # Publish the results
     try:
       self.image_pub1.publish(self.bridge.cv2_to_imgmsg(self.cv_image1, "bgr8"))

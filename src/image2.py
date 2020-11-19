@@ -31,20 +31,6 @@ class image_converter_2:
     self.joint_centers_green_pub2 = rospy.Publisher("/image2/joint_centers/green", Float64MultiArray, queue_size=10)
     self.joint_centers_red_pub2 = rospy.Publisher("/image2/joint_centers/red", Float64MultiArray, queue_size=10)
     self.target_center_pub2 = rospy.Publisher("/image2/target_center", Float64MultiArray, queue_size=10)
-<<<<<<< HEAD
-=======
-
-    #When the joints are not visible, use the previous value of y to estimate its position.
-    self.previous_box_circularity = 0.77
-    self.previous_target_area = 0.0
-
-    #These variables are used to keep track of target velocity to be used when approximating the next position of
-    #target when it is not visible
-    self.is_target_detected = True
-    self.prev_time = np.array([rospy.get_time()], dtype='float64')
-    self.target_velocity_y = 0.0
-    self.previous_target_ypos = np.array([0.0, 0.0], dtype='float64')
->>>>>>> b140d5e608708f198cb0d734e7f520ce1889009d
 
 
     #These variables are used to keep track of target velocity to be used when approximating the next position of
@@ -247,7 +233,7 @@ class image_converter_2:
       areas.append(area)
       perimeter = cv2.arcLength(c, closed=True)
       circularity = 4 * np.pi * area / (perimeter ** 2)
-      print(circularity)
+      #print(circularity)
       circularities.append(circularity)
 
     # If the object circularity sis less than a certain threshold( meaning we identified it as a box) and there's only
@@ -347,6 +333,7 @@ class image_converter_2:
     red_center, red_radius = self.predict_circle_center2(masked_circles['Red'])
     # Get the position of center of target sphere
     target_center= self.detect_sphere_target2(self.cv_image2)
+
 
 
     self.y_center = Float64MultiArray()

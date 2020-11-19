@@ -143,7 +143,6 @@ class images_sync:
 
 
 
-<<<<<<< HEAD
   def forward_kinematics(self):
     # a03 =np.array([(cos(a+b+c)+cos(a-b-c))/2,	-sin(b+c),	 (sin(a+b+c)+sin(a-b-c))/,	 (5*sin(a+b+c)+5*sin(a-b-c))/4
     #     (sin(a+b+c)-sin(a-b-c))/2	 cos(b+c)	(-cos(a+b+c)+cos(a-b-c))/2	(-5*cos(a+b+c)+5*cos(a-b-c))/4
@@ -175,8 +174,6 @@ class images_sync:
   def closed_loop_control(self, theta1, theta2, theta3, theta4):
     pass
 
-=======
->>>>>>> b140d5e608708f198cb0d734e7f520ce1889009d
 
   # Recieve data from both image_processing nodes corresponding to both cameras, process it, and publish
   # TODO: Alot needs to be changed. The processing part is incomplete. Dont forget to publish at the end too.

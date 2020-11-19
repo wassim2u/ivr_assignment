@@ -6,6 +6,7 @@ import rospy
 import cv2
 import numpy as np
 import tensorflow as tf
+import os
 from numpy import sin, cos
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
@@ -55,9 +56,8 @@ def threshold(cv_image, lower_range, upper_range):
 
 def get_predictions(img):
     IMG_SIZE = 32 #Size changed to match Tensorflow model shape requirements
-    img = cv2.resize(img, dsize=(32, 32))
-
-    interpreter = tf.lite.Interpreter(model_path="src/ivr_assignment/target_model.tflite")
+    img = cv2.resize(img, dsize=(IMG_SIZE, IMG_SIZE))
+    interpreter = tf.lite.Interpreter(model_path=os.path.expanduser("~/catkin_ws/src/ivr_assignment/target_model.tflite"))
     interpreter.allocate_tensors()
 
     input_details = interpreter.get_input_details()
@@ -83,7 +83,6 @@ def change_frame(y, z, center_y, center_z):
   point = np.array([[0.], [y], [z], [1.]])
   transformation = np.array([[1.,0.,0.,0.],[0., np.cos(np.pi), -np.sin(np.pi), -center_y*np.cos(np.pi)],[np.sin(np.pi), np.cos(np.pi), -center_y*np.sin(np.pi)-center_z*np.cos(np.pi)],[0.,0.,0.,1.]])
   return np.dot(transformation, point)
-
 
 
 

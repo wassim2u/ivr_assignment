@@ -26,6 +26,8 @@ class image_converter_1:
     self.image_sub1 = rospy.Subscriber("/camera1/robot/image_raw",Image,self.callback1)
     # initialize the bridge between openCV and ROS
     self.bridge = CvBridge()
+    #Initialize publisher to move joint 1
+    self.joint1_pub = rospy.Publisher("/robot/joint1_position_controller/command", Float64, queue_size=10)
     #initialize a publisher to move the joint2
     self.joint2_pub = rospy.Publisher("/robot/joint2_position_controller/command", Float64, queue_size=10)
     #initialize a publisher to move the joint3
@@ -245,7 +247,7 @@ class image_converter_1:
     contours, hierarchy = cv2.findContours(mask, 1, 2)
     # Draw the outline on the binary image
     cv2.drawContours(img, contours, -1, (0, 255, 0), 1)
-    cv2.imshow('draw contours', img)
+    #cv2.imshow('draw contours', img)
     cv2.waitKey(1)
 
   # Draws a circle on the image. Call when needed for visualisation and to check result.
@@ -254,7 +256,7 @@ class image_converter_1:
     color = [255, 23, 0]
     line_thickness = 2
     cv2.circle(new_img, (int(center[0]), int(center[1])), int(radius), color, line_thickness)
-    cv2.imshow('Image with predicted shape of circle', new_img)
+    #cv2.imshow('Image with predicted shape of circle', new_img)
     cv2.waitKey(1)
 
 
@@ -337,9 +339,10 @@ class image_converter_1:
     try:
       self.image_pub1.publish(self.bridge.cv2_to_imgmsg(self.cv_image1, "bgr8"))
       #publish new joint angles
-      # self.joint2_pub.publish(self.joint2_angle)
-      # self.joint3_pub.publish(self.joint3_angle)
-      # self.joint4_pub.publish(self.joint4_angle)
+      self.joint1_pub.publish(np.pi/4)
+      self.joint2_pub.publish(np.pi/4)
+      self.joint3_pub.publish(np.pi/4)
+      self.joint4_pub.publish(0.0)
 
       #publish joint centers with coordinates (y,z) taken from image 1
       self.joint_centers_yellow_pub1.publish(self.y_center)

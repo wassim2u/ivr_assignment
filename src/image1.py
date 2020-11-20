@@ -99,7 +99,7 @@ class image_converter_1:
       cz = int(M['m01'] / M['m00'])
       return np.array([cy, cz])
     
-    return np.array([0.0, 0.0])
+    return np.zeros((1,2))
 
   #TODO: Solve edge case for thiss well when its completely hidden
 
@@ -325,10 +325,11 @@ class image_converter_1:
     self.target_sphere_center = Float64MultiArray()
     self.target_sphere_center.data = target_center
 
+    """This is for task 3.1 to record the images of the robot at different angles
     angle_str = "1.0472 -0.7854 1.5708 0.3491"
     angle_split = angle_str.split()
     angles = [float(i) for i in angle_split]
-
+    """
 
     # update to current time
     self.time = rospy.get_time()
@@ -340,10 +341,10 @@ class image_converter_1:
     try:
       self.image_pub1.publish(self.bridge.cv2_to_imgmsg(self.cv_image1, "bgr8"))
       #publish new joint angles
-      self.joint1_pub.publish(angles[0])
-      self.joint2_pub.publish(angles[1])
-      self.joint3_pub.publish(angles[2])
-      self.joint4_pub.publish(angles[3])
+      #self.joint1_pub.publish(angles[0])
+      #self.joint2_pub.publish(angles[1])
+      #self.joint3_pub.publish(angles[2])
+      #self.joint4_pub.publish(angles[3])
 
       #publish joint centers with coordinates (y,z) taken from image 1
       self.joint_centers_yellow_pub1.publish(self.y_center)
@@ -355,8 +356,6 @@ class image_converter_1:
 
     except CvBridgeError as e:
       print(e)
-
-    cv2.imwrite('sample10_w1.png', self.cv_image1)
 
 # call the class
 def main(args):

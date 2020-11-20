@@ -5,13 +5,15 @@ import sys
 import rospy
 import cv2
 import numpy as np
-from numpy import sin, cos
+import sympy as sp
+from sympy import symbols, diff, sin, cos
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from std_msgs.msg import Float64MultiArray, Float64
 from cv_bridge import CvBridge, CvBridgeError
 import message_filters
 import random
+from helpers import *
 
 class controller:
 
@@ -26,13 +28,29 @@ class controller:
         self.b_sub1 = message_filters.Subscriber("/image1/joint_centers/blue", Float64MultiArray)
         self.g_sub1 = message_filters.Subscriber("/image1/joint_centers/green", Float64MultiArray)
         self.r_sub1 = message_filters.Subscriber("/image1/joint_centers/red", Float64MultiArray)
-        self.target_sub1 = message_filters.Subscriber("/image1/target_center", Float64MultiArray)
 
         self.y_sub2 = message_filters.Subscriber("/image2/joint_centers/yellow", Float64MultiArray)
         self.b_sub2 = message_filters.Subscriber("/image2/joint_centers/blue", Float64MultiArray)
         self.g_sub2 = message_filters.Subscriber("/image2/joint_centers/green", Float64MultiArray)
         self.r_sub2 = message_filters.Subscriber("/image2/joint_centers/red", Float64MultiArray)
+
+        self.target_sub1 = message_filters.Subscriber("/image1/target_center", Float64MultiArray)
         self.target_sub2 = message_filters.Subscriber("/image2/target_center", Float64MultiArray)
+
+        self.joint_angle_1 = rospy.Subscriber("/robot/joint1_position_controller/command", Float64MultiArray)
+        self.joint_angle_2 = rospy.Subscriber("/robot/joint2_position_controller/command", Float64MultiArray)
+        self.joint_angle_3 = rospy.Subscriber("/robot/joint3_position_controller/command", Float64MultiArray)
+        self.joint_angle_4 = rospy.Subscriber("/robot/joint1_position_controller/command", Float64MultiArray)
+
+
+        #Initialize publisher to move joint 1 
+        self.joint1_pub = rospy.Publisher("/robot/joint1_position_controller/command", Float64, queue_size=10)
+        #initialize a publisher to move the joint2
+        self.joint2_pub = rospy.Publisher("/robot/joint2_position_controller/command", Float64, queue_size=10)
+        #initialize a publisher to move the joint3
+        self.joint3_pub = rospy.Publisher("/robot/joint3_position_controller/command", Float64, queue_size=10)
+        #initialize a publisher to move the joint4
+        self.joint4_pub = rospy.Publisher("/robot/joint4_position_controller/command", Float64, queue_size=10)
 
         # synchronise incoming channels using the timestamps contained in their headers
         # slop defines the delay in seconds with which messages are synchronized
@@ -46,6 +64,11 @@ class controller:
 
         #set error margin for readings
         self.error_margin = 0.0
+        self.prev_time = rospy.get_time()
+        self.error = np.array([0.0,0.0], dtype='float64')  
+        self.error_d = np.array([0.0,0.0], dtype='float64')
+        self.Kp = np.array([[10, 0], [0, 10]])
+        self.Kd = np.array([[0.1, 0], [0, 0.1]])
 
     def get_x(self, image_1_coordinates):
         
@@ -202,16 +225,104 @@ class controller:
         print("Green" + str(self.green_3d))
         print("Red" + str(self.red_3d))
 
+    def closed_loop_control(self, theta1, theta2, theta3, theta4, target):
 
-    def get_jacobian(self, a, b, c, d):
-        #xx = (-7*cos(a+b+c)+7*cos(a-b+c)-7*cos(a+b-c)+7*cos(a-b-c)-6*cos(a+b+d)-6*cos(a-b+d)-3*cos(a+b+c+d)+3*cos(a-b+c+d)-3*cos(a+b-c+d)+3*cos(a-b-c+d)+6*cos(a+b-d)+6*cos(a-b-d)-3*cos(a+b+c-d)+3*cos(a-b+c-d)-3*cos(a+b-c-d)+3*cos(a-b-c-d)-14*sin(a+c)+14*sin(a-c)-6*sin(a+c+d)+6*sin(a-c+d)-6*sin(a+c-d)+6*sin(a-c-d))/8
-        #yy = (14*cos(a+c)-14*cos(a-c)+6*cos(a+c+d)-6*cos(a-c+d)+6*cos(a+c-d)-6*cos(a-c-d)-7*sin(a+b+c)+7*sin(a-b+c)-7*sin(a+b-c)+7*sin(a-b-c)-6*sin(a+b+d)-6*sin(a-b+d)-3*sin(a+b+c+d)+3*sin(a-b+c+d)-3*sin(a+b-c+d)+3*sin(a-b-c+d)+6*sin(a+b-d)+6*sin(a-b-d)-3*sin(a+b+c-d)+3*sin(a-b+c-d)-3*sin(a+b-c-d)+3*sin(a-b-c-d))/8
-        #zz = (7*cos(b+c)+7*cos(b-c)+6*cos(b+d)+3*cos(b+c+d)+3*cos(b-c+d)-6*cos(b-d)+3*cos(b+c-d)+3*cos(b-c-d)+10)/4
-        xx = (-7*cos(a+b+c)+7*cos(a-b+c)-7*cos(a+b-c)+7*cos(a-b-c)-6*cos(a+b+d)-6*cos(a-b+d)-3*cos(a+b+c+d)+3*cos(a-b+c+d)-3*cos(a+b-c+d)+3*cos(a-b-c+d)+6*cos(a+b-d)+6*cos(a-b-d)-3*cos(a+b+c-d)+3*cos(a-b+c-d)-3*cos(a+b-c-d)+3*cos(a-b-c-d)+14*sin(a+c)-14*sin(a-c)+6*sin(a+c+d)-6*sin(a-c+d)+6*sin(a+c-d)-6*sin(a-c-d))/8
-        yy = (-14*cos(a+c)+14*cos(a-c)-6*cos(a+c+d)+6*cos(a-c+d)-6*cos(a+c-d)+6*cos(a-c-d)-7*sin(a+b+c)+7*sin(a-b+c)-7*sin(a+b-c)+7*sin(a-b-c)-6*sin(a+b+d)-6*sin(a-b+d)-3*sin(a+b+c+d)+3*sin(a-b+c+d)-3*sin(a+b-c+d)+3*sin(a-b-c+d)+6*sin(a+b-d)+6*sin(a-b-d)-3*sin(a+b+c-d)+3*sin(a-b+c-d)-3*sin(a+b-c-d)+3*sin(a-b-c-d))/8
-        zz = (7*cos(b+c)+7*cos(b-c)+6*cos(b+d)+3*cos(b+c+d)+3*cos(b-c+d)-6*cos(b-d)+3*cos(b+c-d)+3*cos(b-c-d)+10)/4
+        #Note: the robot is redundant, so we can get away with just fixing theta1=0.0 
+        theta1 = float(0.0)
+
+        q = np.array([theta1, float(theta2), float(theta3), float(theta4)]).T
+
+        #Compute pseudoinverse of jacobian
+        j_inv = np.linalg.pinv(self.get_jacobian(theta1, theta2, theta3, theta4))
+
+        #Compute joint coordinates
+        self.get_z(self.image_1_coordinates, self.image_2_coordinates)
+        self.get_x(self.image_1_coordinates, self.image_2_coordinates)
+        self.get_y(self.image_1_coordinates, self.image_2_coordinates)
+
+        #Get end effector position
+        end_effector = self.forward_kinematics(theta1, theta2, theta3, theta4)
+
+        #Get delta t
+        current_time = rospy.get_time()
+        dt = current_time - self.prev_time
+        self.prev_time = current_time
+
+        #TODO: Get target
+        target = self.trajectory()
+
+        current_error = pos-end_effector
+        self.error_d = (current_error-self.error)/dt
+        self.error = current_error
+
+        #now compute q dot
+        kp_d_err = np.dot(self.Kp, self.error.transpose())
+        kd_d_err = np.dot(self.Kd, self.error_d.transpose())
+        q_dot = np.dot(j_inv, (kp_d_err+kd_d_err))
+
+        q = q + (dt * q_dot)
+        return q
+
+    def get_trajectory_error(self, cv_image):
+        angles = self.get_angles(cv_image)
+
+        current_time = rospy.get_time()
+        current_trajectory = self.trajectory()
+        dt = current_time - self.first_time
+        self.first_time = current_time
+
+        trajectory_difference = current_trajectory-self.error
+        self.error_d = trajectory_difference/dt
+        self.error = current_trajectory
+        
+        j_inv = np.linalg.pinv(self.get_jacobian(angles))
+        q_dot = np.dot(j_inv, self.error_d.transpose())
+        new_q = angles + dt*q_dot
+        return new_q
+
+    def forward_kinematics(self, a, b, c, d):
+        xx = (-7*sp.cos(a+b+c)+7*sp.cos(a-b+c)-7*sp.cos(a+b-c)+7*sp.cos(a-b-c)-6*sp.cos(a+b+d)-6*sp.cos(a-b+d)-3*sp.cos(a+b+c+d)+3*sp.cos(a-b+c+d)-3*sp.cos(a+b-c+d)+3*sp.cos(a-b-c+d)+6*sp.cos(a+b-d)+6*sp.cos(a-b-d)-3*sp.cos(a+b+c-d)+3*sp.cos(a-b+c-d)-3*sp.cos(a+b-c-d)+3*sp.cos(a-b-c-d)+14*sp.sin(a+c)-14*sp.sin(a-c)+6*sp.sin(a+c+d)-6*sp.sin(a-c+d)+6*sp.sin(a+c-d)-6*sp.sin(a-c-d))/8
+        yy = (-14*sp.cos(a+c)+14*sp.cos(a-c)-6*sp.cos(a+c+d)+6*sp.cos(a-c+d)-6*sp.cos(a+c-d)+6*sp.cos(a-c-d)-7*sp.sin(a+b+c)+7*sp.sin(a-b+c)-7*sp.sin(a+b-c)+7*sp.sin(a-b-c)-6*sp.sin(a+b+d)-6*sp.sin(a-b+d)-3*sp.sin(a+b+c+d)+3*sp.sin(a-b+c+d)-3*sp.sin(a+b-c+d)+3*sp.sin(a-b-c+d)+6*sp.sin(a+b-d)+6*sp.sin(a-b-d)-3*sp.sin(a+b+c-d)+3*sp.sin(a-b+c-d)-3*sp.sin(a+b-c-d)+3*sp.sin(a-b-c-d))/8
+        zz = (7*sp.cos(b+c)+7*sp.cos(b-c)+6*sp.cos(b+d)+3*sp.cos(b+c+d)+3*sp.cos(b-c+d)-6*sp.cos(b-d)+3*sp.cos(b+c-d)+3*sp.cos(b-c-d)+10)/4
         return [xx, yy, zz]
 
+    def get_jacobian(self, theta1, theta2, theta3, theta4):
+        a, b, c, d = symbols('a b c d', integer=True)
+
+        fk = self.forward_kinematics(a,b,c,d)
+        xx = fk[0]
+        yy = fk[1]        
+        zz = fk[2]
+
+        #Using sympy diff, we can now compute the jacobian matrix:
+        #Row 1
+        j_11 = diff(xx, a)
+        j_12 = diff(xx, b)
+        j_13 = diff(xx, c)
+        j_14 = diff(xx, d)
+
+        #Row 2
+        j_21 = diff(yy, a)
+        j_22 = diff(yy, b)
+        j_23 = diff(yy, c)
+        j_24 = diff(yy, d)
+
+        #Row 3
+        j_31 = diff(zz, a)
+        j_32 = diff(zz, b)
+        j_33 = diff(zz, c)
+        j_34 = diff(zz, d)
+
+        #Now make it a proper matrix substituting the actual angles
+        #jacobian = np.array([[j_11.subs(a,theta1, b, theta2, c, theta3, d, theta4), j_12.subs(a,theta1, b, theta2, c, theta3, d, theta4), j_13.subs(a,theta1, b, theta2, c, theta3, d, theta4), j_14.subs(a,theta1, b, theta2, c, theta3, d, theta4)], [j_21.subs(a,theta1, b, theta2, c, theta3, d, theta4), j_22.subs(a,theta1, b, theta2, c, theta3, d, theta4), j_23.subs(a,theta1, b, theta2, c, theta3, d, theta4), j_24.subs(a,theta1, b, theta2, c, theta3, d, theta4)], [j_31.subs(a,theta1, b, theta2, c, theta3, d, theta4), j_32.subs(a,theta1, b, theta2, c, theta3, d, theta4), j_33.subs(a,theta1, b, theta2, c, theta3, d, theta4), j_34.subs(a,theta1, b, theta2, c, theta3, d, theta4)]])
+        jacobian = np.empty((3,4))
+        return jacobian
+
+
+    def get_inverse_jacobian(self, j):
+        return np.linalg.pinv(j)
+
+    """
     #Generates angles for the robot in accordance with task 2.1
     def task_2_1(self):
 
@@ -224,6 +335,7 @@ class controller:
             theta3 = 0
             theta4 = 0
 
+            #please don't put this on r/badcode
             while (theta1 == 0 or abs(theta1) == 1  or theta2 == 0 or abs(theta2) == 1 or theta3 == 0 or abs(theta3) == 1 or theta4 == 0 or abs(theta4) == 1):
                 theta1 = random.randint(-10, 10)
                 theta2 = random.randint(-10, 10)
@@ -243,26 +355,24 @@ class controller:
         readings_file.close()
         angles_file.close()
         print("Successfully written to files.")
-
+    """
             
 
     def callback(self,y1,b1,g1,r1,y2,b2,g2,r2, target1, target2):
 
-        image_1_coordinates = np.array([y1, b1, g1, r1])
-        image_2_coordinates = np.array([y2, b2, g2, r2])
-        self.task_2_1()
+        self.image_1_coordinates = np.array([y1, b1, g1, r1])
+        self.image_2_coordinates = np.array([y2, b2, g2, r2])
 
-        self.get_z(image_1_coordinates, image_2_coordinates)
+        #q = self.closed_loop_control(self.joint_angle_1, self.joint_angle_2, self.joint_angle_3, self.joint_angle_4)
 
         # Get coordinates from the two images and change the values to make them with respect to yellow center in meters
-        #self.create_new_3d_coordinates_from_data(y1, b1, g1, r1, y2, b2, g2, r2,target1, target2)
-        #self.changeAxis()
+        self.create_new_3d_coordinates_from_data(y1, b1, g1, r1, y2, b2, g2, r2,target1, target2)
+        self.changeAxis()
 
 
 # call the class
 def main(args):
   cntr = controller()
-  cntr.task_2_1()
   try:
     rospy.spin()
   except KeyboardInterrupt:

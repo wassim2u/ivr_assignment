@@ -21,19 +21,19 @@ def get_end_effector(cv_image):
 
     return cx_r, cy_r
 
-def convert_pixel_to_metres(cv_image):
-  lower_blue = np.array([100,0,0])
-  upper_blue = np.array([255,50,50])
-  cx_b, cy_b = get_joint_coordinates(cv_image, lower_blue, upper_blue)
-      
-  lower_yellow = np.array([0,100,100])
-  upper_yellow = np.array([50,255,255])
-  cx_y, cy_y = get_joint_coordinates(cv_image, lower_yellow, upper_yellow)
-  #get pixel to metres ratio
-  b = np.array([cx_b, cy_b])
-  y = np.array([cx_y, cy_y])
-  s = np.sum((b-y)**2)
-  dist = np.sqrt(s)
+def convert_pixel_to_metres(blue, yellow):
+
+  blue_1 = np.array([[blue[0]],[blue[2]]])
+  blue_2 = np.array([[blue[1]], [blue[2]]])
+  yellow_1 = np.array([[yellow[0]], [yellow[2]]])
+  yellow_2 = np.array([[yellow[1]], [yellow[2]]])
+
+  s1 = np.sum((blue_1-yellow_1)**2)
+  s2 = np.sum((blue_2-yellow_2)**2)
+
+  dist1 = np.sqrt(s1)
+  dist2 = np.sqrt(s2)
+  average_dist = (dist1+dist2)/2.0
   return 2.5/dist
 
 def get_center(cv_image):

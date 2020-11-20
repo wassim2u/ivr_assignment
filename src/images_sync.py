@@ -66,14 +66,12 @@ class images_sync:
     self.green_center1 = np.asarray(g1.data)
     self.red_center1 = np.asarray(r1.data)
     self.target_center1 = np.asarray(target1.data)
-    print(self.target_center1)
 
     self.yellow_center2 = np.asarray(y2.data)
     self.blue_center2 = np.asarray(b2.data)
     self.green_center2 = np.asarray(g2.data)
     self.red_center2 = np.asarray(r2.data)
     self.target_center2 = np.asarray(target2.data)
-    print(self.target_center2)
 
 
 
@@ -82,32 +80,21 @@ class images_sync:
     self.blue_center1[0] = self.yellow_center1[0]
     self.blue_center2[0] = self.yellow_center2[0]
 
-    distance_blue_green_link1 = np.sqrt(np.sum((self.green_center1 - self.blue_center1) ** 2))
-    distance_blue_green_link2 = np.sqrt(np.sum((self.green_center2 - self.blue_center2) ** 2))
-    if distance_blue_green_link1 >= distance_blue_green_link2:
-      self.z_center =self.yellow_center1[1]
-      self.z_blue = self.blue_center1[1]
-      self.z_green = self.green_center1[1]
-      self.z_red = self.red_center1[1]
-    else:
-      self.z_center = self.yellow_center2[1]
-      self.z_blue = self.blue_center2[1]
-      self.z_green = self.green_center2[1]
-      self.z_red = self.red_center2[1]
-      # if distance_blue_green_link2 > 92:
-      #   self.z_green = self.z_green - self.z_green*0.015
-      #   self.green_center2[0] = self.green_center2[0] - self.green_center2[0]*0.015
+    self.z_center = (self.yellow_center1[1] + self.yellow_center2[1]) / 2
+    self.z_blue = (self.blue_center1[1] + self.blue_center2[1]) / 2
+    self.z_green = (self.green_center1[1] + self.green_center2[1]) / 2
+    self.z_red = (self.red_center1[1] + self.red_center2[1]) / 2
 
-    print(np.sqrt(np.sum((np.array([self.green_center1]) - np.array([self.blue_center1])) ** 2)))
-    print(np.sqrt(np.sum((np.array([self.green_center2]) - np.array([self.blue_center2])) ** 2)))
-
-
-
+    # z of green must not be below z of blue (due to the configuration space of the joint, being -pi/2, pi/2)
+    # These are measured in pixel coordinates, so our z positive is downwards here
+    if self.z_green > self.z_blue:
+      self.z_green = self.z_blue
+      print(self.z_green)
+    print(self.z_green)
     self.yellow_3d = np.array([self.yellow_center2[0], self.yellow_center1[0], self.z_center])
     self.blue_3d = np.array([self.blue_center2[0], self.blue_center1[0], self.z_blue])
     self.green_3d = np.array([self.green_center2[0], self.green_center1[0], self.z_green])
     self.red_3d = np.array([self.red_center2[0], self.red_center1[0], self.z_red])
-    print(self.red_3d)
 
   #Calculate the conversion from pixel to meter,
   # using the joints green and red and the length of the link (3 m) between them.
@@ -115,22 +102,34 @@ class images_sync:
     # find the euclidean distance between two circles
 
     yellow_blue_link_length = np.sqrt(np.sum((self.yellow_3d - self.blue_3d) ** 2))
+    blue_green_link_length = np.sqrt(np.sum((self.blue_3d - self.green_3d) ** 2))
+    green_red_link_length = np.sqrt(np.sum((self.green_3d - self.red_3d) ** 2))
 
-    return 2.5/yellow_blue_link_length
+    return [2.5/yellow_blue_link_length , 3.5/blue_green_link_length , 3/green_red_link_length]
 
   # TODO: Change axis for other centers as well.
   def changeAxis(self):
     new_yellow_3d = np.array([0,0,0])
     new_blue_3d = self.yellow_3d - self.blue_3d
     new_green_3d = self.yellow_3d - self.green_3d
-    ratio = self.pixel2meter()
+    new_red_3d = self.yellow_3d - self.red_3d
+    ratio = 0.0389
+    print(self.pixel2meter()[1])
+    error = (self.pixel2meter()[2] * new_red_3d) - (new_red_3d * 0.038461538461538464)
+    errorGreen = (self.pixel2meter()[1] * new_green_3d) - (new_green_3d * 0.03888888888888889)
+    print(self.pixel2meter()[1])
     print("Ratio:" + str(ratio))
-    self.yellow_3d = new_green_3d
-    self.blue_3d = new_blue_3d * 0.0389
-    self.green_3d = new_green_3d * 0.0389
+    self.yellow_3d = new_yellow_3d
+    self.blue_3d = new_blue_3d * 0.038461538461538464
+    self.green_3d = new_green_3d * 0.03872
+    self.red_3d = new_red_3d * 0.038461538461538464
     print("Values changed to meters:")
+    print("Yellow " + str(self.yellow_3d))
     print("Blue:"+ str(self.blue_3d))
     print("Green" + str(self.green_3d))
+    print("Red" + str(self.red_3d))
+
+
 
   def forward_kinematics(self):
     # a03 =np.array([(cos(a+b+c)+cos(a-b-c))/2,	-sin(b+c),	 (sin(a+b+c)+sin(a-b-c))/,	 (5*sin(a+b+c)+5*sin(a-b-c))/4
@@ -140,6 +139,8 @@ class images_sync:
     #
     # ]
     pass
+
+
 
 
 
@@ -201,10 +202,46 @@ class images_sync:
 
 
 
-    print("Joint2")
-    print(np.arcsin((2/5)*(self.green_3d[0])))
-    print(np.arccos((-2/5)*(self.green_3d[2]-0.32-(2/5*2/7))) - np.pi/2)
-    print("Joint 3")
+
+    print("Joint 2 - semi works")
+
+
+    # x_distance = self.blue_3d[0] - self.green_3d[0]
+    # y_distance = self.blue_3d[1] - self.green_3d[1]
+    # angle = np.arctan2(-y_distance,x_distance)
+    # # if 0.02 < abs(angle) < 0.12:
+    # #   angle = angle - np.sign(angle)/2
+    # # elif 0.12 <= abs(angle) < 0.3:
+    # #   angle = angle - 0.4
+    #
+    #
+    # print(angle)
+    # print("Joint 3 - semi works")
+    # z_distance = -self.blue_3d[2] + self.green_3d[2]
+    sign = np.sign(self.green_3d[0])
+    error = 6 - np.linalg.norm(self.green_3d)
+    # self.green_3d = self.green_3d - (error/3)
+    # print(np.arcsin((self.green_3d[0]+((-sign))/(3.5+0.73)))
+    link = 3.5
+    theta = 0.115
+    M = np.array([
+      [cos(theta), 0, sin(theta)],
+      [0, 1, 0],
+      [-sin(theta), 0, cos(theta)],
+    ])
+
+
+    if self.green_3d[0] <= -3.5 or 0.3< self.green_3d[1] < 1.5:
+      link=4.0
+      self.green_3d[0] = (M.dot(self.green_3d))[0]
+      # self.green_3d[0] =
+      print(self.green_3d)
+    print(np.arcsin((self.green_3d[0])/3.5))
+
+
+    # np.arctan2()
+
+
 
 
 # (cos(a+b)+cos(a-b))/2	-sin(b)	 (sin(a+b)+sin(a-b))/2	 (5*sin(a+b)+5*sin(a-b))/4

@@ -232,9 +232,10 @@ class image_converter_1:
           # Target shape has been detected
           self.is_target_visible = True
 
+  #If the target is not visible, return the center positions calculated previously
     if (not self.is_target_visible):
-      #TODO: PRedict trajectory?
-      pass
+      print("TARGET NOT VISIBLE")
+      return self.previous_target_positions
 
     contour_poly = cv2.approxPolyDP(curve=sphere_contour, epsilon=0.1, closed=True)
     # Using the outline, draw a circle that encloses the partial segment of the circle that is hidden
@@ -263,27 +264,9 @@ class image_converter_1:
 
 
 
-  def update_target_position_and_velocity(self,current_target_ypos):
-    #Get the change in time
-    current_time = rospy.get_time()
-    dt = current_time - self.init_time
-    self.init_time = current_time
-    #Get displacement in y-direction and store the new target position
-    displacement=  current_target_ypos - self.previous_target_ypos
-    self.previous_target_ypos = current_target_ypos
-    #Calculate the velocity in the y-direction and store it
-    current_velocity = displacement/ dt
-    self.target_velocity_y = current_velocity
+  def update_target_positions(self,current_position):
+    self.previous_target_positions = current_position
 
-  #When the target is not visible or cant be detected, calculate the predicted position of y using information
-  #on its previous movement.
-  #Note: When target is hidden in one camera, we can get the z position from the other one.
-  def approximate_target_y_position(self):
-    # Get the change in time
-    current_time = rospy.get_time()
-    dt = current_time - self.init_time
-    predicted_y = self.target_velocity_y * dt + self.previous_target_ypos
-    return predicted_y
 
 
 
@@ -312,9 +295,9 @@ class image_converter_1:
     red_center, r_radius = self.predict_circle_center(masked_circles_image1['Red'])
 
     target_center= self.detect_sphere_target(self.cv_image1)
-    #When the target can be detected from this camera, update the velocity and y_position of our target
+    #When the target can be detected from this camera, update  positions of our target
     if self.is_target_visible:
-      self.update_target_position_and_velocity(target_center[0])
+      self.update_target_positions(target_center)
 
     self.y_center = Float64MultiArray()
     self.y_center.data = yellow_center

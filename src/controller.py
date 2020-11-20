@@ -190,23 +190,25 @@ class controller:
         self.blue_center1[0] = self.yellow_center1[0]
         self.blue_center2[0] = self.yellow_center2[0]
 
-        distance_blue_green_link1 = np.sqrt(np.sum((self.green_center1 - self.blue_center1) ** 2))
-        distance_blue_green_link2 = np.sqrt(np.sum((self.green_center2 - self.blue_center2) ** 2))
-        if distance_blue_green_link1 >= distance_blue_green_link2:
-            self.z_center = self.yellow_center1[1]
-            self.z_blue = self.blue_center1[1]
-            self.z_green = self.green_center1[1]
-            self.z_red = self.red_center1[1]
-        else:
-            self.z_center = self.yellow_center2[1]
-            self.z_blue = self.blue_center2[1]
-            self.z_green = self.green_center2[1]
-            self.z_red = self.red_center2[1]
+
+        self.z_center = (self.yellow_center1[1] + self.yellow_center2[1])/2
+        self.z_blue = (self.blue_center1[1] + self.blue_center2[1])/2
+        self.z_green = (self.green_center1[1] + self.green_center2[1])/2
+        self.z_red = (self.red_center1[1] + self.red_center2[1])/2
+        self.z_target = (self.target_center1[1] + self.target_center2[1])/2
+
+        # z of green must not be below z of blue (due to the configuration space of the joint, being -pi/2, pi/2)
+        # These are measured in pixel coordinates, so our z positive is downwards here
+        if self.z_green > self.z_blue:
+            self.z_green = self.z_blue
+
 
         self.yellow_3d = np.array([self.yellow_center2[0], self.yellow_center1[0], self.z_center])
         self.blue_3d = np.array([self.blue_center2[0], self.blue_center1[0], self.z_blue])
         self.green_3d = np.array([self.green_center2[0], self.green_center1[0], self.z_green])
         self.red_3d = np.array([self.red_center2[0], self.red_center1[0], self.z_red])
+        self.target_3d = np.array([self.target_center2[0], self.target_center1[0], self.z_target])
+
 
     def changeAxis(self):
         new_yellow_3d = np.array([0, 0, 0])
@@ -368,6 +370,7 @@ class controller:
         # Get coordinates from the two images and change the values to make them with respect to yellow center in meters
         self.create_new_3d_coordinates_from_data(y1, b1, g1, r1, y2, b2, g2, r2,target1, target2)
         self.changeAxis()
+        print(self.get_jacobian2(1.2,0.0,0.0,0.0))
 
 
 # call the class

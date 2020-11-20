@@ -33,12 +33,10 @@ class image_converter_2:
     self.target_center_pub2 = rospy.Publisher("/image2/target_center", Float64MultiArray, queue_size=10)
 
 
-    #These variables are used to keep track of target velocity to be used when approximating the next position of
+    #These variables are used to keep track of target  to be used when approximating the next position of
     #target when it is not visible
-    self.is_target_visible = True
     self.prev_time = np.array([rospy.get_time()], dtype='float64')
-    self.target_velocity_y = 0.0
-    self.previous_target_ypos = np.array([0.0, 0.0], dtype='float64')
+    self.previous_target_positions = np.array([0.0,0.0])
 
   ##Code for task 4.1##
   def is_visible(self, m):
@@ -141,9 +139,10 @@ class image_converter_2:
           # Target shape has been detected
           self.is_target_visible = True
 
-      if (not self.is_target_visible):
-        # TODO: PRedict trajectory?
-        pass
+        # If the target is not visible, return the center positions calculated previously
+        if (not self.is_target_visible):
+          print("TARGET NOT VISIBLE")
+          return self.previous_target_positions
 
       contour_poly = cv2.approxPolyDP(curve=sphere_contour, epsilon=0.1, closed=True)
       # Using the outline, draw a circle that encloses the partial segment of the circle that is hidden
@@ -152,27 +151,8 @@ class image_converter_2:
       self.draw_circle_prediction(img, center, radius)
       return center
 
-  def update_target_position_and_velocity(self,current_target_xpos):
-    #Get the change in time
-    current_time = rospy.get_time()
-    dt = current_time - self.prev_time
-    self.prev_time = current_time
-    #Get displacement in y-direction and store the new target position
-    displacement=  current_target_xpos - self.previous_target_xpos
-    self.previous_target_xpos = current_target_xpos
-    #Calculate the velocity in the y-direction and store it
-    current_velocity = displacement/ dt
-    self.target_velocity_x = current_velocity
-
-  #When the target is not visible or cant be detected, calculate the predicted position of y using information
-  #on its previous movement.
-  #Note: When target is hidden in one camera, we can get the z position from the other one.
-  def approximate_target_y_position(self):
-    # Get the change in time
-    current_time = rospy.get_time()
-    dt = current_time - self.prev_time
-    predicted_x = self.target_velocity_x * dt + self.previous_target_xpos
-    return predicted_x
+  def update_target_positions(self, current_position):
+    self.previous_target_positions = current_position
 
   # Draws a circle on the image. Call when needed for visualisation and to check result.
   def draw_circle_prediction(self, img, center, radius):
@@ -207,7 +187,9 @@ class image_converter_2:
     red_center, red_radius = self.predict_circle_center2(masked_circles['Red'])
     # Get the position of center of target sphere
     target_center= self.detect_sphere_target2(self.cv_image2)
-
+    # When the target can be detected from this camera, update  positions of our target
+    if self.is_target_visible:
+      self.update_target_positions(target_center)
 
     self.y_center = Float64MultiArray()
     self.y_center.data = yellow_center

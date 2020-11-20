@@ -99,7 +99,8 @@ class image_converter_1:
       cz = int(M['m01'] / M['m00'])
       return np.array([cy, cz])
     
-    return np.zeros((1,2))
+    #We are very unlikely to ever send this value, so we will use it to indicate a null-value
+    return np.zeros((9999.0,9999.0))
 
   #TODO: Solve edge case for thiss well when its completely hidden
 
@@ -188,6 +189,7 @@ class image_converter_1:
     center, radius = cv2.minEnclosingCircle(contour_poly)
     return np.array([int(center[0]), int(center[1])]) ,radius
 
+  """
     #TODO: Deal with occlusion case
   def detect_sphere_target(self, img):
     # Turn RGB Image into HSV colour space
@@ -199,7 +201,7 @@ class image_converter_1:
     #
     center = self.predict_sphere_center(img, opening_mask)
     return center
-
+"""
   # Returns the center of the matched shape with the help of classifer (which should be sphere).
   def predict_sphere_center(self, img, opening_mask):
     #Find outlines of our shapes inour binary images

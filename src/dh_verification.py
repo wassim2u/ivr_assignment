@@ -62,53 +62,56 @@ def print_in_latex(matrix):
 def set_frame01():
     # Type symbols and values you might need
     # frame01
-    theta0 = pi / 2
+    theta1 = symbols(" theta1 ")
+    theta1 = -pi / 2
     d1 = 2.5
     a1 = 0
-    alpha1 = pi / 2
-    frame01 = calculate_for_current_frame(theta0, d1, a1, alpha1)
+    alpha1 = -pi / 2
+    frame01 = calculate_for_current_frame(theta1, d1, a1, alpha1)
     return frame01
 
 def set_frame12():
     ###frame12##
-    theta1 = symbols(" theta1 ")
+    theta2 = symbols(" theta2 ")
     # change these values
-    theta1 = pi / 2 + theta1
+    theta2 = -pi / 2 - theta2
     d2 = 0
     a2 = 0
     alpha2 = pi / 2
     #
-    frame12 = calculate_for_current_frame(theta1, d2, a2, alpha2)
+    frame12 = calculate_for_current_frame(theta2, d2, a2, alpha2)
     return frame12
 
 def set_frame23():
     ###frame23###
-    theta2 = symbols(" theta2 ")
+    theta3 = symbols(" theta3 ")
     # change these values
-    theta2 = theta2
+    theta3 = theta3
     d3 = 0
     a3 = 3.5
     alpha3 = - pi / 2
     #
-    frame23 = calculate_for_current_frame(theta2, d3, a3, alpha3)
+    frame23 = calculate_for_current_frame(theta3, d3, a3, alpha3)
     return  frame23
+
 
 def set_frame34():
     ###frame34###
-    theta3 = symbols(" theta3 ")
+    theta4 = symbols(" theta4 ")
     # change these values
-    theta3 = theta3
+    theta4 = theta4
     d4 = 0
     a4 = 3
     alpha4 = 0
     #
-    frame34 = calculate_for_current_frame(theta3, d4, a4, alpha4)
+    frame34 = calculate_for_current_frame(theta4, d4, a4, alpha4)
     return frame34
 
 if __name__ == "__main__":
 
     frame01 = set_frame01()
     frame12 = set_frame12()
+
     frame23 = set_frame23()
     frame34 = set_frame34()
 
@@ -121,6 +124,9 @@ if __name__ == "__main__":
     ###frame04###
     frame04 = frame03*frame34
 
+    ##frame13###
+    frame13 = frame12*frame23
+
     #print stuff either using print or pprint
-    print_matrix_nicely(frame04)
+    pprint(frame03[:,3])
 

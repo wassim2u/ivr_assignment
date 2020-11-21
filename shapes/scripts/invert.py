@@ -9,7 +9,7 @@ sphere_inverted_path = '../spheres/inverted'
 sphere_rotated_path = '../spheres/rotated'
 
 box_original_path = '../boxes/original'
-box_inverted_path= '../spheres/inverted'
+box_inverted_path= '../boxes/inverted'
 box_rotated_path=  '../boxes/rotated'
 
 #Test folder paths to generate inverted ones to pass to the classifier model

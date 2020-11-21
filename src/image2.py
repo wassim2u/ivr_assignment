@@ -9,6 +9,7 @@ from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from std_msgs.msg import Float64MultiArray, Float64
 from cv_bridge import CvBridge, CvBridgeError
+from helpers import *
 
 
 class image_converter_2:
@@ -31,17 +32,22 @@ class image_converter_2:
     self.joint_centers_red_pub2 = rospy.Publisher("/image2/joint_centers/red", Float64MultiArray, queue_size=10)
     self.target_center_pub2 = rospy.Publisher("/image2/target_center", Float64MultiArray, queue_size=10)
 
-    #When the joints are not visible, use the previous value of y to estimate its position.
-    self.previous_box_circularity = 0.77
-    self.previous_target_area = 0.0
 
-    #These variables are used to keep track of target velocity to be used when approximating the next position of
-    #target when it is not visible
-    self.is_target_detected = True
-    self.prev_time = np.array([rospy.get_time()], dtype='float64')
-    self.target_velocity_y = 0.0
-    self.previous_target_ypos = np.array([0.0, 0.0], dtype='float64')
+    # These variables are used to keep track of target to be used when approximating the next position of
+    # target when it is not visible
+    self.is_target_visible = True
+    self.previous_target_positions = np.array([0.0,0.0])
 
+    #These variables are used to keep track of joint positions when completely hidden
+    self.previous_yellow_pos = np.array([0.0,0.0])
+    self.previous_blue_pos = np.array([0.0,0.0])
+    self.previous_green_pos = np.array([0.0,0.0])
+    self.previous_red_pos = np.array([0.0,0.0])
+
+
+  ##Code for task 4.1##
+  def is_visible(self, m):
+    return not(m==0)
 
   # Return a dictionary that contains binary images for each circle
   # Retrieve the image of a specific circle from the dictionary using their colour as key (eg. dictionary_name['Blue'])
@@ -66,20 +72,11 @@ class image_converter_2:
     binary_images = {"Blue": blue_mask, "Green": green_mask, "Red": red_mask, "Yellow": yellow_mask}
     return binary_images
 
-  # Find center of a specific circle. The image returned from camera2 is of plane xz
-  def find_color_center2(self, mask_color):
-    kernel = np.ones((3, 3), np.uint8)
-    dilated_mask = cv2.dilate(mask_color, kernel, iterations=3)
-    M = cv2.moments(dilated_mask)
-
-    cx = int(M['m10'] / M['m00'])
-    cz = int(M['m01'] / M['m00'])
-    return np.array([cx, cz])
 
     #TODO: Solve edge case for thiss well when its completely hidden
   # Find the outline of a binary image of a specific circle, and use minEnclosingCircle to predict the center of circle
   # that is partly hidden behind an object.
-  def predict_circle_center2(self, mask):
+  def predict_joint_center2(self, mask):
     kernel = np.ones((3, 3), np.uint8)
     dilated_mask = cv2.dilate(mask, kernel, iterations=4)
     #check whether circle is visible by checking its area:
@@ -103,93 +100,54 @@ class image_converter_2:
     masks = cv2.inRange(hsv_image, (10, 0, 0), (24, 255, 255))
     kernel = np.ones((3, 3), np.uint8)
     opening_mask = cv2.morphologyEx(masks, cv2.MORPH_OPEN, kernel)
-    cv2.imshow('window', opening_mask)
-
-    # check whether circle is visible by checking its area
-    M = cv2.moments(opening_mask)
-    area = M['m00']
     # Match template
-    center = self.match_sphere_template(img, opening_mask)
+    center = self.predict_sphere_center2(img, opening_mask)
     return center
 
-  # Matches binary image with sphere template. Returns the center of the matched shape (which should be sphere).
-  def match_sphere_template(self, img, opening_mask):
-    # Match template
-    contours, hierarchy = cv2.findContours(opening_mask, 1, 1)
-    sphere_contour = contours[0]
-    circularities = []
-    areas = []
-    for c in contours:
-      area = cv2.contourArea(c)
-      areas.append(area)
-      perimeter = cv2.arcLength(c, closed=True)
-      circularity = 4 * np.pi * area / (perimeter ** 2)
-      print(circularity)
-      circularities.append(circularity)
+    # Returns the center of the matched shape with the help of classifer (which should be sphere).
+  def predict_sphere_center2(self, img, opening_mask):
+      # Find outlines of our shapes inour binary images
+      contours, hierarchy = cv2.findContours(opening_mask, 1, 1)
+      sphere_contour = contours[0]
+      sphere_index = 0
+      box_index = 1
+      self.is_target_visible= False
+      # Predict which shape is the sphere
+      for cnt in contours:
+        # Find center of mass of our current contour.
+        M = cv2.moments(cnt)
+        cx = int(M["m10"] / M["m00"])
+        cz = int(M["m01"] / M["m00"])
+        # Take the current region of interest after finding its center.
+        IMG_SIZE = 36
+        current_shape = opening_mask[int(cz - IMG_SIZE / 2): int(cz + IMG_SIZE / 2),
+                        int(cx - IMG_SIZE / 2): int(cx + IMG_SIZE / 2)]
+        # Invert our region of interest to pass to classifer which is built on inverted images
+        current_shape = cv2.bitwise_not(current_shape)
+        # Increase the number of channels of our array in order to be able to process it in our classifier
+        current_shape = cv2.cvtColor(current_shape, cv2.COLOR_GRAY2BGR)
+        predictions = get_predictions(current_shape)
+        # If the predictions for the first index (which is the result that it is a sphere) is
+        # greater than the predictions for the second index (result that it is a box), then we have identified our target.
+        if predictions[sphere_index] > predictions[box_index]:
+          sphere_contour = cnt
+          # Target shape has been detected
+          self.is_target_visible = True
 
-    # If the object circularity sis less than a certain threshold( meaning we identified it as a box) and there's only
-    # one shape present, then the sphere is completely hidden.
-    if len(areas) == 1 and circularities[0] < 0.79:
-      # Predict target position using previous information
-      self.is_target_detected = False
-      return self.approximate_target_y_position()
-    elif len(areas) == 1 and circularities[0] > 0.79:
-      self.is_target_detected = True
-      sphere_contour=contours[0]
-    # Compare circularities and areas to identify which shape we are looking at.
-    else:
-      if circularities[0] > circularities[1]:
-        if circularities[0] > 0.77:
-          sphere_contour = contours[0]
-        elif abs(self.previous_target_area - areas[0]) > 2 and areas[0] > areas[1]:
-          self.previous_target_area = areas[0]
-          sphere_contour = contours[1]
-        else:
-          self.previous_target_area = areas[1]
-          sphere_contour = contours[0]
-      elif circularities[1] > circularities[0]:
-        if circularities[1] > 0.77:
-          sphere_contour = contours[1]
-        elif abs(self.previous_target_area - areas[1]) >2 and (areas[1] > areas[0]):
-          self.previous_target_area = areas[1]
-          sphere_contour = contours[0]
-        else:
-          self.previous_target_area = areas[0]
-          sphere_contour = contours[1]
+        # If the target is not visible, return the center positions calculated previously
+        if (not self.is_target_visible):
+          print("TARGET NOT VISIBLE")
+          return self.previous_target_positions
 
-    # Target shape has been detected
-    self.is_target_detected = True
+      contour_poly = cv2.approxPolyDP(curve=sphere_contour, epsilon=0.1, closed=True)
+      # Using the outline, draw a circle that encloses the partial segment of the circle that is hidden
+      center, radius = cv2.minEnclosingCircle(contour_poly)
+      # Draw outline of shape predicted to be a sphere to validate result
+      self.draw_circle_prediction(img, center, radius)
+      return center
 
-    contour_poly = cv2.approxPolyDP(curve=sphere_contour, epsilon=0.1, closed=True)
-    # Using the outline, draw a circle that encloses the partial segment of the circle that is hidden
-    center, radius = cv2.minEnclosingCircle(contour_poly)
-    # Draw outline of shape predicted to be a sphere to validate result
-    self.draw_circle_prediction(img, center, radius)
-    return center
-
-
-
-  def update_target_position_and_velocity(self,current_target_ypos):
-    #Get the change in time
-    current_time = rospy.get_time()
-    dt = current_time - self.prev_time
-    self.prev_time = current_time
-    #Get displacement in y-direction and store the new target position
-    displacement=  current_target_ypos - self.previous_target_ypos
-    self.previous_target_ypos = current_target_ypos
-    #Calculate the velocity in the y-direction and store it
-    current_velocity = displacement/ dt
-    self.target_velocity_y = current_velocity
-
-  #When the target is not visible or cant be detected, calculate the predicted position of y using information
-  #on its previous movement.
-  #Note: When target is hidden in one camera, we can get the z position from the other one.
-  def approximate_target_y_position(self):
-    # Get the change in time
-    current_time = rospy.get_time()
-    dt = current_time - self.prev_time
-    predicted_y = self.target_velocity_y * dt + self.previous_target_ypos
-    return predicted_y
+  def update_target_positions(self, current_position):
+    self.previous_target_positions = current_position
 
   # Draws a circle on the image. Call when needed for visualisation and to check result.
   def draw_circle_prediction(self, img, center, radius):
@@ -197,18 +155,22 @@ class image_converter_2:
     color = [255, 23, 0]
     line_thickness = 2
     cv2.circle(new_img, (int(center[0]), int(center[1])), int(radius), color, line_thickness)
-    cv2.imshow('Image with predicted shape of circle', new_img)
+    cv2.imshow('Image with predicted shape of circle 2', new_img)
     cv2.waitKey(1)
+
+
+
 
 
 
   # Recieve data, process it, and publish
   def callback2(self,data):
-    # Recieve the image
+    # Receive the image
     try:
       self.cv_image2 = self.bridge.imgmsg_to_cv2(data, "bgr8")
     except CvBridgeError as e:
       print(e)
+
     # Uncomment if you want to save the image
     #cv2.imwrite('image_copy.png', cv_image)
     im2=cv2.imshow('window2', self.cv_image2)
@@ -217,13 +179,16 @@ class image_converter_2:
     ##Task 2##
     masked_circles = self.detect_circles(self.cv_image2)
     # Get Centers of each joint and end effector(red). 
-    yellow_center, yellow_radius = self.predict_circle_center2(masked_circles['Yellow'])
-    blue_center, blue_radius = self.predict_circle_center2(masked_circles['Blue'])
-    green_center, green_radius = self.predict_circle_center2(masked_circles['Green'])
-    red_center, red_radius = self.predict_circle_center2(masked_circles['Red'])
+    yellow_center, yellow_radius = self.predict_joint_center2(masked_circles['Yellow'])
+    blue_center, blue_radius = self.predict_joint_center2(masked_circles['Blue'])
+    green_center, green_radius = self.predict_joint_center2(masked_circles['Green'])
+    red_center, red_radius = self.predict_joint_center2(masked_circles['Red'])
     # Get the position of center of target sphere
     target_center= self.detect_sphere_target2(self.cv_image2)
 
+    # When the target can be detected from this camera, update  positions of our target
+    if self.is_target_visible:
+      self.update_target_positions(target_center)
 
     self.y_center = Float64MultiArray()
     self.y_center.data = yellow_center

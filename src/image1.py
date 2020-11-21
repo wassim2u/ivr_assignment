@@ -46,6 +46,14 @@ class image_converter_1:
     self.is_target_visible = True
     self.previous_target_positions = np.array([0.0,0.0])
 
+    #These variables are used to keep track of joint positions when completely hidden
+    self.previous_yellow_pos = np.array([0.0,0.0])
+    self.previous_blue_pos = np.array([0.0,0.0])
+    self.previous_green_pos = np.array([0.0,0.0])
+    self.previous_red_pos = np.array([0.0,0.0])
+
+
+
   ##Code for task 4.1##
   def is_visible(self, m):
     return not(m==0)
@@ -59,6 +67,13 @@ class image_converter_1:
 
   def move_joint4(self, t):
     return (np.pi/2)*np.sin((np.pi/20.0)*t)
+
+  def compute_joint_angles(self):
+      time = rospy.get_time()
+      joint2_angle = self.move_joint2(time)
+      joint3_angle = self.move_joint3(time)
+      joint4_angle = self.move_joint4(time)
+      return joint2_angle, joint3_angle, joint4_angle
 
   #Return a dictionary that contains binary images for each circle
   #Retrieve the image of a specific circle from the dictionary using their colour as key (eg. dictionary_name['Blue'])
@@ -85,26 +100,11 @@ class image_converter_1:
 
 
 
+
   # Find center of a specific circle. The image returned from camera1 is of plane yz.
-  # TODO: Tackle cases of 0 area where circle is completely hidden
-  def find_color_center(self ,mask_color):
-    kernel = np.ones((3, 3), np.uint8)
-    dilated_mask = cv2.dilate(mask_color, kernel, iterations=3)
-    M = cv2.moments(dilated_mask)
-
-    if (self.is_visible(M['m00'])):
-      cy = int(M['m10'] / M['m00'])
-      cz = int(M['m01'] / M['m00'])
-      return np.array([cy, cz])
-    
-    return np.array([0.0, 0.0])
-
-
-
-  #TODO: Solve edge case for thiss well when its completely hidden
   # Find the outline of a binary image of a specific circle, and use minEnclosingCircle to predict the center of circle
   # that is partly hidden behind an object.
-  def predict_circle_center(self, mask):
+  def predict_joint_center(self, mask):
     kernel = np.ones((3, 3), np.uint8)
     dilated_mask = cv2.dilate(mask, kernel, iterations=4)
     #check whether circle is visible by checking its area:
@@ -128,7 +128,6 @@ class image_converter_1:
     masks = cv2.inRange(hsv_image, (10, 0, 0), (24, 255, 255))
     kernel = np.ones((3, 3), np.uint8)
     opening_mask = cv2.morphologyEx(masks,cv2.MORPH_OPEN ,kernel)
-    #
     center = self.predict_sphere_center(img, opening_mask)
     return center
 
@@ -219,12 +218,14 @@ class image_converter_1:
 
     masked_circles_image1 = self.detect_circles(self.cv_image1)
 
-    yellow_center, y_radius = self.predict_circle_center(masked_circles_image1['Yellow'])
-    blue_center, bl_radius= self.predict_circle_center(masked_circles_image1['Blue'])
-    green_center, gr_radius= self.predict_circle_center(masked_circles_image1['Green'])
-    red_center, r_radius = self.predict_circle_center(masked_circles_image1['Red'])
+
+    yellow_center, y_radius = self.predict_joint_center(masked_circles_image1['Yellow'])
+    blue_center, bl_radius= self.predict_joint_center(masked_circles_image1['Blue'])
+    green_center, gr_radius= self.predict_joint_center(masked_circles_image1['Green'])
+    red_center, r_radius = self.predict_joint_center(masked_circles_image1['Red'])
 
     target_center= self.detect_sphere_target(self.cv_image1)
+
     #When the target can be detected from this camera, update  positions of our target
     if self.is_target_visible:
       self.update_target_positions(target_center)

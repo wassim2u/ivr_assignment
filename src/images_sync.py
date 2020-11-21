@@ -39,6 +39,7 @@ class images_sync:
     self.b_sub2 = message_filters.Subscriber("/image2/joint_centers/blue", Float64MultiArray)
     self.g_sub2 = message_filters.Subscriber("/image2/joint_centers/green", Float64MultiArray)
     self.r_sub2 = message_filters.Subscriber("/image2/joint_centers/red", Float64MultiArray)
+    self.target_sub2 = message_filters.Subscriber("/image2/target_center", Float64MultiArray)
 
     #initialize trajectory error
     self.error = np.array([0.0,0.0], dtype='float64') 
@@ -53,10 +54,6 @@ class images_sync:
                                                     ],
                                                      queue_size=10,slop= 0.1, allow_headerless=True)
     ts.registerCallback(self.callback)
-
-
-    self.previous_green = np.array([0,0,0])
-    self.initial = True
 
 
   #Note: Image 2 - xz plane; Image 1 - yz plane
@@ -74,6 +71,49 @@ class images_sync:
     self.target_center2 = np.asarray(target2.data)
 
 
+
+
+  #Note: Image 2 - xz plane; Image 1 - yz plane
+  def create_new_3d_coordinates_from_data(self,y1,b1,g1,r1,target1,y2,b2,g2,r2,target2):
+    self.yellow_center1 = np.asarray(y1.data)
+    self.blue_center1 = np.asarray(b1.data)
+    self.green_center1 = np.asarray(g1.data)
+    self.red_center1 = np.asarray(r1.data)
+    self.target_center1 = np.asarray(target1.data)
+    print(self.target_center1)
+
+    self.yellow_center2 = np.asarray(y2.data)
+    self.blue_center2 = np.asarray(b2.data)
+    self.green_center2 = np.asarray(g2.data)
+    self.red_center2 = np.asarray(r2.data)
+    self.target_center2 = np.asarray(target2.data)
+    print(self.target_center2)
+
+
+
+
+    #blue and yellow should always on the same x and y-axis:
+    self.blue_center1[0] = self.yellow_center1[0]
+    self.blue_center2[0] = self.yellow_center2[0]
+
+    distance_blue_green_link1 = np.sqrt(np.sum((self.green_center1 - self.blue_center1) ** 2))
+    distance_blue_green_link2 = np.sqrt(np.sum((self.green_center2 - self.blue_center2) ** 2))
+    if distance_blue_green_link1 >= distance_blue_green_link2:
+      self.z_center =self.yellow_center1[1]
+      self.z_blue = self.blue_center1[1]
+      self.z_green = self.green_center1[1]
+      self.z_red = self.red_center1[1]
+    else:
+      self.z_center = self.yellow_center2[1]
+      self.z_blue = self.blue_center2[1]
+      self.z_green = self.green_center2[1]
+      self.z_red = self.red_center2[1]
+      # if distance_blue_green_link2 > 92:
+      #   self.z_green = self.z_green - self.z_green*0.015
+      #   self.green_center2[0] = self.green_center2[0] - self.green_center2[0]*0.015
+
+    print(np.sqrt(np.sum((np.array([self.green_center1]) - np.array([self.blue_center1])) ** 2)))
+    print(np.sqrt(np.sum((np.array([self.green_center2]) - np.array([self.blue_center2])) ** 2)))
 
 
     #blue and yellow should always on the same x and y-axis:
@@ -99,7 +139,6 @@ class images_sync:
   #Calculate the conversion from pixel to meter,
   # using the joints green and red and the length of the link (3 m) between them.
   def pixel2meter(self):
-    # find the euclidean distance between two circles
 
     yellow_blue_link_length = np.sqrt(np.sum((self.yellow_3d - self.blue_3d) ** 2))
     blue_green_link_length = np.sqrt(np.sum((self.blue_3d - self.green_3d) ** 2))
@@ -107,7 +146,6 @@ class images_sync:
 
     return [2.5/yellow_blue_link_length , 3.5/blue_green_link_length , 3/green_red_link_length]
 
-  # TODO: Change axis for other centers as well.
   def changeAxis(self):
     new_yellow_3d = np.array([0,0,0])
     new_blue_3d = self.yellow_3d - self.blue_3d
@@ -128,20 +166,6 @@ class images_sync:
     print("Blue:"+ str(self.blue_3d))
     print("Green" + str(self.green_3d))
     print("Red" + str(self.red_3d))
-
-
-
-  def forward_kinematics(self):
-    # a03 =np.array([(cos(a+b+c)+cos(a-b-c))/2,	-sin(b+c),	 (sin(a+b+c)+sin(a-b-c))/,	 (5*sin(a+b+c)+5*sin(a-b-c))/4
-    #     (sin(a+b+c)-sin(a-b-c))/2	 cos(b+c)	(-cos(a+b+c)+cos(a-b-c))/2	(-5*cos(a+b+c)+5*cos(a-b-c))/4
-    #               -sin(a)	        0	                    cos(a)	                (5*cos(a)+6)/2
-    #                     0	        0	                         0	                             1
-    #
-    # ]
-    pass
-
-
-
 
 
 
@@ -175,30 +199,6 @@ class images_sync:
     print("Blue Center: Img Coordinates" + str(self.blue_3d) )
 
     self.changeAxis()
-
-
-   #a01:
-    # np.array([
-    #   [0,0,1,0],
-    #   [1,0,0,0],
-    #   [0,1,0,5/2],
-    #   [0,0,0,1]
-    # ])
-
-    # #a12:
-    #
-    # np.array([
-    #   [-sin(a),0,cos(a),0],
-    #   [cos(a),0,sin(a),0],
-    #   [0,1,0,0],
-    #   [0,0,0,1]
-    # ])
-
-    #a02:
-    # 0	cos(a)	-sin(a)	5*cos(a)/2
-    # 0	sin(a)	 cos(a)	5*sin(a)/2
-    # 1	     0	      0	         0
-    # 0	     0	      0	         1
 
 
 
@@ -237,19 +237,6 @@ class images_sync:
       # self.green_3d[0] =
       print(self.green_3d)
     print(np.arcsin((self.green_3d[0])/3.5))
-
-
-    # np.arctan2()
-
-
-
-
-# (cos(a+b)+cos(a-b))/2	-sin(b)	 (sin(a+b)+sin(a-b))/2	 (5*sin(a+b)+5*sin(a-b))/4
-# (sin(a+b)-sin(a-b))/2	 cos(b)	(-cos(a+b)+cos(a-b))/2	(-5*cos(a+b)+5*cos(a-b))/4
-#                sin(a)	      0	               -cos(a)	           (-5*cos(a)+7)/2
-#                     0	      0	                     0	                         1
-#
-
 
 
 # call the class

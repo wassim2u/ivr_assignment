@@ -151,7 +151,7 @@ class image_converter_1:
         areas.append(area)
         perimeter = cv2.arcLength(c, closed=True)
         circularity = 4 * np.pi * area / (perimeter ** 2)
-        print(circularity)
+        #print(circularity)
         circularities.append(circularity)
 
 
@@ -287,6 +287,9 @@ class image_converter_1:
 
     ##Task 2##
 
+    fk = fk_matrix(0.0,0.0,0.0,-np.pi/2)
+    print(fk.col(3))
+
     masked_circles_image1 = self.detect_circles(self.cv_image1)
 
     yellow_center, y_radius = self.predict_circle_center(masked_circles_image1['Yellow'])
@@ -319,6 +322,7 @@ class image_converter_1:
     # update to current time
     self.time = rospy.get_time()
 
+    self.joint1_angle = Float64()
     self.joint2_angle = Float64()
     self.joint3_angle = Float64()
     self.joint4_angle = Float64()
@@ -326,10 +330,11 @@ class image_converter_1:
     try:
       self.image_pub1.publish(self.bridge.cv2_to_imgmsg(self.cv_image1, "bgr8"))
       #publish new joint angles
-      #self.joint1_pub.publish(angles[0])
-      #self.joint2_pub.publish(angles[1])
-      #self.joint3_pub.publish(angles[2])
-      #self.joint4_pub.publish(angles[3])
+      self.joint4_pub.publish(-np.pi/2)
+      self.joint3_pub.publish(0.0)
+      self.joint1_pub.publish(0.0)
+      #self.joint3_pub.publish(self.joint3_angle)
+      #self.joint4_pub.publish(self.joint4_angle)
 
       #publish joint centers with coordinates (y,z) taken from image 1
       self.joint_centers_yellow_pub1.publish(self.y_center)

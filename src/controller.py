@@ -6,7 +6,7 @@ import rospy
 import cv2
 import numpy as np
 import sympy as sp
-from sympy import symbols, diff, sin, cos
+from sympy import symbols, diff, sin, cos, Matrix
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from std_msgs.msg import Float64MultiArray, Float64
@@ -37,10 +37,10 @@ class controller:
         self.target_sub1 = message_filters.Subscriber("/image1/target_center", Float64MultiArray)
         self.target_sub2 = message_filters.Subscriber("/image2/target_center", Float64MultiArray)
 
-        self.joint_angle_1 = rospy.Subscriber("/robot/joint1_position_controller/command", Float64MultiArray)
-        self.joint_angle_2 = rospy.Subscriber("/robot/joint2_position_controller/command", Float64MultiArray)
-        self.joint_angle_3 = rospy.Subscriber("/robot/joint3_position_controller/command", Float64MultiArray)
-        self.joint_angle_4 = rospy.Subscriber("/robot/joint1_position_controller/command", Float64MultiArray)
+        #self.joint_angle_1 = rospy.Subscriber("/robot/joint1_position_controller/command", Float64)
+        #self.joint_angle_2 = rospy.Subscriber("/robot/joint2_position_controller/command", Float64)
+        #self.joint_angle_3 = rospy.Subscriber("/robot/joint3_position_controller/command", Float64)
+        #self.joint_angle_4 = rospy.Subscriber("/robot/joint1_position_controller/command", Float64)
 
 
         #Initialize publisher to move joint 1 
@@ -289,7 +289,7 @@ class controller:
         return [xx, yy, zz]
 
     def get_jacobian(self, theta1, theta2, theta3, theta4):
-        a, b, c, d = symbols('a b c d', integer=True)
+        a, b, c, d = symbols('a b c d')
 
         fk = self.forward_kinematics(a,b,c,d)
         xx = fk[0]
@@ -324,9 +324,31 @@ class controller:
     def get_inverse_jacobian(self, j):
         return np.linalg.pinv(j)
 
-    """
-    #Generates angles for the robot in accordance with task 2.1
     def task_2_1(self):
+        #First we need the forwards kinematics equations, giving the thetas as variables
+        a = 0.0
+        b, c, d = symbols('b c d')
+
+        #Get the frame transformations
+        a01 = a_0_1(a)
+        a02 = a01*a_1_2(b)
+        a03 = a02*a_2_3(c)
+        a04 = a03*a_3_4(d)
+
+        #We do not need to compute a, since joint 1 is fixed and hence we will always have a=0.0
+        #To compute the angle of joint 2, we need the coordinates of the center of joint 2 and joint 4 and subtract them
+        diff_2_4_z = self.z_blue-self.z_green
+        diff_2_4_y = self.y_blue-self.y_green
+        
+        #Compute the arctan
+        theta2 = np.arctan2(diff_2_4_z, diff_2_4_y)
+
+        print(theta2)
+
+
+    """
+    #Generates angles for the robot in accordance with task 3.1
+    def task_3_1(self):
 
         angles_file = open("../angles.txt", "w")
         readings_file = open("../readings.txt", "w")
@@ -361,16 +383,30 @@ class controller:
             
 
     def callback(self,y1,b1,g1,r1,y2,b2,g2,r2, target1, target2):
-
         self.image_1_coordinates = np.array([y1, b1, g1, r1])
         self.image_2_coordinates = np.array([y2, b2, g2, r2])
 
-        #q = self.closed_loop_control(self.joint_angle_1, self.joint_angle_2, self.joint_angle_3, self.joint_angle_4)
+        self.get_z()
+        self.get_x()
+        self.get_y()
+
+        self.task_2_1()
 
         # Get coordinates from the two images and change the values to make them with respect to yellow center in meters
-        self.create_new_3d_coordinates_from_data(y1, b1, g1, r1, y2, b2, g2, r2,target1, target2)
-        self.changeAxis()
-        print(self.get_jacobian2(1.2,0.0,0.0,0.0))
+        #self.create_new_3d_coordinates_from_data(y1, b1, g1, r1, y2, b2, g2, r2,target1, target2)
+        #self.changeAxis()
+        #q = self.closed_loop_control(0.0, 0.0, 0.0, 0.0, self.red_3d)
+        try:
+            #publish new joint angles
+            #self.joint1_pub.publish(q[0])
+            #self.joint2_pub.publish(q[1])
+            #self.joint3_pub.publish(q[2])
+            #self.joint4_pub.publish(q[3])
+            print(q[0])
+
+        except CvBridgeError as e:
+            print(e)
+
 
 
 # call the class

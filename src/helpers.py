@@ -7,7 +7,8 @@ import cv2
 import numpy as np
 import tensorflow as tf
 import os
-from numpy import sin, cos
+import sympy as sp
+from sympy import symbols, diff, sin, cos, Matrix
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from std_msgs.msg import Float64MultiArray, Float64
@@ -83,6 +84,92 @@ def change_frame(y, z, center_y, center_z):
   point = np.array([[0.], [y], [z], [1.]])
   transformation = np.array([[1.,0.,0.,0.],[0., np.cos(np.pi), -np.sin(np.pi), -center_y*np.cos(np.pi)],[np.sin(np.pi), np.cos(np.pi), -center_y*np.sin(np.pi)-center_z*np.cos(np.pi)],[0.,0.,0.,1.]])
   return np.dot(transformation, point)
+
+##These functions define the frame transformations for forward kinematics##
+def a_0_1(theta1):
+  rot_z = Matrix([
+    [sp.cos(theta1-(sp.pi/2)), (-1.0)*sp.sin(theta1-(sp.pi/2)), 0, 0],
+    [sp.sin(theta1-(sp.pi/2)), sp.cos(theta1-(sp.pi/2)), 0, 0],
+    [0, 0, 1, 0],
+    [0, 0, 0, 1]
+  ])
+  trans_z = Matrix([
+    [1, 0, 0, 0],
+    [0, 1, 0, 0],
+    [0, 0, 1, 2.5],
+    [0, 0, 0, 1]
+  ])
+  rot_x = Matrix([
+    [1, 0, 0, 0],
+    [0, sp.cos(sp.pi/2), (-1.0)*sp.sin(sp.pi/2), 0],
+    [0, sp.sin(sp.pi/2), sp.cos(sp.pi/2), 0],
+    [0, 0, 0, 1]
+  ])
+  mtx_0_1 = rot_z*trans_z*rot_x
+  return mtx_0_1
+
+def a_1_2(theta2):
+  rot_z = Matrix([
+    [sp.cos(theta2+(sp.pi/2)), (-1.0)*sp.sin(theta2+(sp.pi/2)), 0, 0],
+    [sp.sin(theta2+(sp.pi/2)), sp.cos(theta2+(sp.pi/2)), 0, 0],
+    [0, 0, 1, 0],
+    [0, 0, 0, 1]
+  ])
+  rot_x = Matrix([
+    [1, 0, 0, 0],
+    [0, sp.cos(sp.pi/2), (-1.0)*sp.sin(sp.pi/2), 0],
+    [0, sp.sin(sp.pi/2), sp.cos(sp.pi/2), 0],
+    [0, 0, 0, 1]
+  ])
+  print(type(rot_z), type(rot_x))
+  mtx_1_2 = rot_z*rot_x
+  return mtx_1_2
+
+def a_2_3(theta3):
+  rot_z = Matrix([
+    [sp.cos(theta3), (-1)*sp.sin(theta3), 0, 0],
+    [sp.sin(theta3), sp.cos(theta3), 0, 0],
+    [0, 0, 1, 0],
+    [0, 0, 0, 1]
+  ])
+  trans_x = Matrix([
+    [1, 0, 0, 3.5],
+    [0, 1, 0, 0],
+    [0, 0, 1, 0],
+    [0, 0, 0, 1]
+  ])
+  rot_x = Matrix([
+    [1, 0, 0, 0],
+    [0, sp.cos(sp.pi/2), (-1)*sp.sin(sp.pi/2), 0],
+    [0, sp.sin(sp.pi/2), sp.cos(sp.pi/2), 0],
+    [0, 0, 0, 1]
+  ])
+  mtx_2_3 = rot_z*trans_x*rot_x
+  return mtx_2_3
+
+def a_3_4(theta4):
+  rot_z = Matrix([
+    [sp.cos(theta4), (-1)*sp.sin(theta4), 0, 0],
+    [sp.sin(theta4), sp.cos(theta4), 0, 0],
+    [0, 0, 1, 0],
+    [0, 0, 0, 1]
+  ])
+  trans_x = Matrix([
+    [1, 0, 0, 3],
+    [0, 1, 0, 0],
+    [0, 0, 1, 0],
+    [0, 0, 0, 1]
+  ])
+  mtx_3_4 = rot_z*trans_x
+  return mtx_3_4
+
+def fk_matrix(theta1, theta2, theta3, theta4):
+  mtx_0_1 = a_0_1(theta1)
+  mtx_1_2 = a_1_2(theta2)
+  mtx_2_3 = a_2_3(theta3)
+  mtx_3_4 = a_3_4(theta4)
+  fk = mtx_0_1*mtx_1_2*mtx_2_3*mtx_3_4
+  return fk
 
 
 

@@ -367,24 +367,8 @@ class controller:
 
         print(sp.solve((x,y,z), (b)))
 
-    def rotation_matrix_from_vectors(self, vec1, vec2):
-        """ Find the rotation matrix that aligns vec1 to vec2
-        :param vec1: A 3d "source" vector
-        :param vec2: A 3d "destination" vector
-        :return mat: A transform matrix (3x3) which when applied to vec1, aligns it with vec2.
-        """
-        a, b = (vec1 / np.linalg.norm(vec1)).reshape(3), (vec2 / np.linalg.norm(vec2)).reshape(3)
-        v = np.cross(a, b)
-        c = np.dot(a, b)
-        s = np.linalg.norm(v)
-        kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
-        rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
-        a = np.arctan2(rotation_matrix[2,1], rotation_matrix[2,2])
-        b = np.arctan2(-rotation_matrix[2,0], np.sqrt((rotation_matrix[2,1]**2)+rotation_matrix[2,2]**2))
-        c = np.arctan2(rotation_matrix[1,0], rotation_matrix[0,0])
-        print(a,b,c)
-        return rotation_matrix
-
+    def get_direction(self, joint1, joint2):
+        return joint2-joint1
 
 
     def task_2_1(self):
@@ -392,46 +376,19 @@ class controller:
         a = 0.0
         b, c, d = symbols('b c d')
 
-        x_rot=Matrix([[sp.cos(b), -sp.sin(b), 0, 0], [sp.sin(b), sp.cos(b), 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
-        y_rot=Matrix([[sp.cos(c), -sp.sin(c), 0, 0], [sp.sin(c), sp.cos(c), 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
-        init = Matrix([[0.0], [0.0], [1.0], [1.0]])
-        diff_1_3_y = self.blue_3d[1]-self.green_3d[1]
-        diff_1_3_x = self.blue_3d[0]-self.green_3d[0]
-        diff_1_3_z = self.blue_3d[2]-self.green_3d[2]
-        diff_1_3_x = self.blue_3d[0]-self.green_3d[0]
-        diff_1_3_y = self.blue_3d[1]-self.green_3d[1]
-        diff_1_3_z = self.blue_3d[2]-self.green_3d[2]
-        v = Matrix([[diff_1_3_x], [diff_1_3_y], [diff_1_3_z], [1]])
-        transform= (x_rot*y_rot*v)
-        print(transform)
+        theta1, theta2, theta3, theta4 = 0
 
-        #Get the frame transformations
-        a01 = a_0_1(a)
-        
-        #We do not need to compute a, since joint 1 is fixed and hence we will always have a=0.0
-        #To compute the angle of joint 2, we need the coordinates of the center of joint 2 and joint 4 and subtract them
-        
-        #v = Matrix([[diff_1_3_x], [diff_1_3_y], [diff_1_3_z], [1]])
-        #print(a01.shape)
-        #mtx = (a01.inv())*v
-        #m = sp.atan(mtx[1,0]/mtx[0,0])
-        #a02 = a_1_2(m)*a01
-        #mtx2 = a02.inv()*v
-        #m2 = sp.atan(mtx2[2,0]/mtx2[1,0])
-        #a03 = (a_2_3(m2)*a02)
-        #theta2 = np.arctan2(mtx.row(1).col(0), mtx.row(2).col(0))
-        #transform = mtx.inv()*v
-        #mtx3 = a03.inv()*mtx2
-        #m3 = sp.atan(mtx3[1,0]/mtx3[0,0])
-        #a03 = a_3_4(m3)*a03
-        #mtx4 = a03.inv()*mtx3
-        #m3 = np.arctan2(mtx4[2,0], mtx[1,0])
-        
-        #theta3 = np.arctan2(transform.row(1), transform.row(2))
-        #print(m, m2)
-        
-        #a03 = a_2_3(c)*a02
-        #a04 = a_3_4(d)*a03
+        #Construct theyz plane
+        yz_plane = Matrix([1,0,0])
+
+        joint1 = Matrix([[self.blue_3d[0]], [self.blue_3d[1]], [self.blue_3d[2]]])
+        joint2 = Matrix([[self.green_3d[0]], [self.green_3d[1]], self.green_3d[2]])
+
+        direction_j1j2 = self.get_direction(joint1, joint2)
+
+        numerator = yz_plane*direction_j1j2
+        denominator = sp.sqrt(yz_plane)*sp.sqrt(sum([y**2 for y in yz_plane]))
+        print(sp.asin(numerator/denominator))
 
 
     """
@@ -485,8 +442,8 @@ class controller:
         point = fk_green(0.0, 1.0, 1.0)
         print(point.col(3))
         #m_a = np.array([[0.0], [0.0], [6.0]])
-        [-2.94514844682764], [1.59127049694494], [3.52174303604250]
-        self.last_attempt(Matrix([[-2.94514844682764],[1.59127049694494],[0.02174303604250], [0.0]]))
+        self.task_2_1()
+        #self.last_attempt(Matrix([[-2.94514844682764],[1.59127049694494],[0.02174303604250], [0.0]]))
         #self.task_2_1()
         #self.blue_joint_rotation(Matrix([[0.0], [3.5], [2.5]]))
         #print(self.rotation_matrix_from_vectors(m_a, m_b))

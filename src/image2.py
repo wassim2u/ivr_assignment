@@ -31,12 +31,21 @@ class image_converter_2:
     self.joint_centers_green_pub2 = rospy.Publisher("/image2/joint_centers/green", Float64MultiArray, queue_size=10)
     self.joint_centers_red_pub2 = rospy.Publisher("/image2/joint_centers/red", Float64MultiArray, queue_size=10)
     self.target_center_pub2 = rospy.Publisher("/image2/target_center", Float64MultiArray, queue_size=10)
+<<<<<<< HEAD
+=======
+
+    # These variables are used to keep track if the joint positions are visible
+    self.circle_colorNames = ["Yellow", "Blue", "Green", "Red"]
+    self.previous_circle_positions = {"Yellow": [0.0, 0.0], "Blue": [0.0, 0.0], "Green": [0.0, 0.0], "Red": [0.0, 0.0]}
+    self.is_circle_visible = {"Yellow": True, "Blue": True, "Green": True, "Red": True}
+>>>>>>> f788035bfca61298cb706469d0ae0a03f84d6b8b
 
 
     #These variables are used to keep track of target  to be used when approximating the next position of
     #target when it is not visible
-    self.prev_time = np.array([rospy.get_time()], dtype='float64')
+    self.is_target_visible = True
     self.previous_target_positions = np.array([0.0,0.0])
+
 
   ##Code for task 4.1##
   def is_visible(self, m):
@@ -65,31 +74,24 @@ class image_converter_2:
     binary_images = {"Blue": blue_mask, "Green": green_mask, "Red": red_mask, "Yellow": yellow_mask}
     return binary_images
 
-  # Find center of a specific circle. The image returned from camera2 is of plane xz
-  def find_color_center2(self, mask_color):
-    kernel = np.ones((3, 3), np.uint8)
-    dilated_mask = cv2.dilate(mask_color, kernel, iterations=3)
-    M = cv2.moments(dilated_mask)
-
-    if (self.is_visible(M['m00'])):
-      cy = int(M['m10'] / M['m00'])
-      cz = int(M['m01'] / M['m00'])
-      return np.array([cy, cz])
-    
-    return np.array([0.0, 0.0])
 
     #TODO: Solve edge case for thiss well when its completely hidden
   # Find the outline of a binary image of a specific circle, and use minEnclosingCircle to predict the center of circle
   # that is partly hidden behind an object.
-  def predict_circle_center2(self, mask):
+  def predict_circle_center2(self, color, mask):
     kernel = np.ones((3, 3), np.uint8)
     dilated_mask = cv2.dilate(mask, kernel, iterations=4)
     #check whether circle is visible by checking its area:
     M = cv2.moments(dilated_mask)
     area = M['m00']
-    if (M['m00']==0):
-      #TODO: Tackle issue when its completely hidden
-      pass
+    # If the circle is completely hidden, return the previous value
+    if (area < 0.0001):
+      self.is_circle_visible[color] = False
+      return self.previous_circle_positions[color]
+
+    else:
+      self.is_circle_visible[color] = True
+
     #Find outline of the shape of the masked circle
     contours, hierarchy = cv2.findContours(dilated_mask, 1, 2)
     contour_poly = cv2.approxPolyDP(curve=contours[0], epsilon=0.1, closed=True)
@@ -139,10 +141,10 @@ class image_converter_2:
           # Target shape has been detected
           self.is_target_visible = True
 
-        # If the target is not visible, return the center positions calculated previously
-        if (not self.is_target_visible):
-          print("TARGET NOT VISIBLE")
-          return self.previous_target_positions
+      # If the target is not visible, return the center positions calculated previously
+      if (not self.is_target_visible):
+        print("TARGET NOT VISIBLE")
+        return self.previous_target_positions
 
       contour_poly = cv2.approxPolyDP(curve=sphere_contour, epsilon=0.1, closed=True)
       # Using the outline, draw a circle that encloses the partial segment of the circle that is hidden
@@ -154,6 +156,12 @@ class image_converter_2:
   def update_target_positions(self, current_position):
     self.previous_target_positions = current_position
 
+<<<<<<< HEAD
+=======
+  def update_circle_positions(self, color, positions):
+    self.previous_circle_positions[color] = positions
+
+>>>>>>> f788035bfca61298cb706469d0ae0a03f84d6b8b
   # Draws a circle on the image. Call when needed for visualisation and to check result.
   def draw_circle_prediction(self, img, center, radius):
     new_img = img.copy()
@@ -164,7 +172,10 @@ class image_converter_2:
     cv2.waitKey(1)
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> f788035bfca61298cb706469d0ae0a03f84d6b8b
   # Recieve data, process it, and publish
   def callback2(self,data):
     # Receive the image
@@ -180,6 +191,7 @@ class image_converter_2:
 
     ##Task 2##
     masked_circles = self.detect_circles(self.cv_image2)
+<<<<<<< HEAD
     # Get Centers of each joint and end effector(red). 
     yellow_center, yellow_radius = self.predict_circle_center2(masked_circles['Yellow'])
     blue_center, blue_radius = self.predict_circle_center2(masked_circles['Blue'])
@@ -187,8 +199,32 @@ class image_converter_2:
     red_center, red_radius = self.predict_circle_center2(masked_circles['Red'])
     # Get the position of center of target sphere
     target_center= self.detect_sphere_target2(self.cv_image2)
+=======
+    # Get Centers of each joint and end effector(red).
+    yellow_center, yellow_radius = self.predict_circle_center2("Yellow",masked_circles['Yellow'])
+    blue_center, blue_radius = self.predict_circle_center2("Blue",masked_circles['Blue'])
+    green_center, green_radius = self.predict_circle_center2("Green", masked_circles['Green'])
+    red_center, red_radius = self.predict_circle_center2("Red",masked_circles['Red'])
+    # When the joint or end effector can be detected from this camera, update  positions of our target
+    for color in self.circle_colorNames:
+      if self.is_circle_visible[color] and color == "Yellow":
+        self.update_circle_positions(color, yellow_center)
+
+      if self.is_circle_visible[color] and color == "Blue":
+        self.update_circle_positions(color, blue_center)
+
+      if self.is_circle_visible[color] and color == "Green":
+        self.update_circle_positions(color, green_center)
+
+      if self.is_circle_visible[color] and color == "Red":
+        self.update_circle_positions(color, red_center)
+
+
+    target_center = self.detect_sphere_target2(self.cv_image2)
+>>>>>>> f788035bfca61298cb706469d0ae0a03f84d6b8b
     # When the target can be detected from this camera, update  positions of our target
     if self.is_target_visible:
+      print("target visible")
       self.update_target_positions(target_center)
 
     self.y_center = Float64MultiArray()

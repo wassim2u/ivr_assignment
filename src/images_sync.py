@@ -56,8 +56,21 @@ class images_sync:
     ts.registerCallback(self.callback)
 
 
-    self.previous_green = np.array([0,0,0])
-    self.initial = True
+  #Note: Image 2 - xz plane; Image 1 - yz plane
+  def create_new_3d_coordinates_from_data(self,y1,b1,g1,r1,target1,y2,b2,g2,r2,target2):
+    self.yellow_center1 = np.asarray(y1.data)
+    self.blue_center1 = np.asarray(b1.data)
+    self.green_center1 = np.asarray(g1.data)
+    self.red_center1 = np.asarray(r1.data)
+    self.target_center1 = np.asarray(target1.data)
+
+    self.yellow_center2 = np.asarray(y2.data)
+    self.blue_center2 = np.asarray(b2.data)
+    self.green_center2 = np.asarray(g2.data)
+    self.red_center2 = np.asarray(r2.data)
+    self.target_center2 = np.asarray(target2.data)
+
+
 
 
   #Note: Image 2 - xz plane; Image 1 - yz plane
@@ -100,7 +113,6 @@ class images_sync:
   #Calculate the conversion from pixel to meter,
   # using the joints green and red and the length of the link (3 m) between them.
   def pixel2meter(self):
-    # find the euclidean distance between two circles
 
     yellow_blue_link_length = np.sqrt(np.sum((self.yellow_3d - self.blue_3d) ** 2))
     blue_green_link_length = np.sqrt(np.sum((self.blue_3d - self.green_3d) ** 2))
@@ -108,7 +120,6 @@ class images_sync:
 
     return [2.5/yellow_blue_link_length , 3.5/blue_green_link_length , 3/green_red_link_length]
 
-  # TODO: Change axis for other centers as well.
   def changeAxis(self):
     new_yellow_3d = np.array([0,0,0])
     new_blue_3d = self.yellow_3d - self.blue_3d

@@ -171,5 +171,11 @@ def fk_matrix(theta1, theta2, theta3, theta4):
   fk = mtx_0_1*mtx_1_2*mtx_2_3*mtx_3_4
   return fk
 
+def fk_green(theta1, theta2, theta3):
+  mtx_0_1 = a_0_1(theta1)
+  mtx_1_2 = a_1_2(theta2)
+  mtx_2_3 = a_2_3(theta3)
+  fk = mtx_0_1*mtx_1_2*mtx_2_3
+  return fk
 
 

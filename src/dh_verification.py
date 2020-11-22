@@ -66,7 +66,7 @@ def set_frame01():
     theta1 = -pi / 2
     d1 = 2.5
     a1 = 0
-    alpha1 = -pi / 2
+    alpha1 = pi / 2
     frame01 = calculate_for_current_frame(theta1, d1, a1, alpha1)
     return frame01
 
@@ -74,7 +74,7 @@ def set_frame12():
     ###frame12##
     theta2 = symbols(" theta2 ")
     # change these values
-    theta2 = -pi / 2 - theta2
+    theta2 = pi / 2 + theta2
     d2 = 0
     a2 = 0
     alpha2 = pi / 2
@@ -86,7 +86,7 @@ def set_frame23():
     ###frame23###
     theta3 = symbols(" theta3 ")
     # change these values
-    theta3 = theta3
+    theta3 =  theta3
     d3 = 0
     a3 = 3.5
     alpha3 = - pi / 2
@@ -128,5 +128,24 @@ if __name__ == "__main__":
     frame13 = frame12*frame23
 
     #print stuff either using print or pprint
+    pprint(frame01[:,3])
+    pprint(frame12[:,3])
     pprint(frame03[:,3])
 
+    #testing
+    M = frame04[:,3]
+    theta2 = symbols(" theta2 ")
+    theta3 = symbols(" theta3 ")
+    theta4 = symbols(" theta4 ")
+
+    pprint(M.subs(theta2,pi/2).subs(theta3,0).subs(theta4,0))
+
+    M = Matrix([
+        [cos(theta), 0, sin(theta), 0],
+        [0, 1, 0, 0],
+        [-sin(theta), 0, cos(theta), 0],
+        [0, 0, 0, 1]
+    ])
+    M =M.subs(theta,-0.17)
+
+    pprint(M*Matrix([4.13595421, 0.68221925, 3.45373496,1]))

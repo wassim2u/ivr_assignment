@@ -6,14 +6,15 @@ import rospy
 import cv2
 import numpy as np
 import sympy as sp
-from sympy import symbols, diff, sin, cos, Matrix
+from sympy import Matrix, symbols, diff, Eq, linsolve
+from sympy.matrices.dense import matrix_multiply_elementwise
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from std_msgs.msg import Float64MultiArray, Float64
 from cv_bridge import CvBridge, CvBridgeError
 import message_filters
-import random
 from helpers import *
+import math
 
 class controller:
 
@@ -28,29 +29,17 @@ class controller:
         self.b_sub1 = message_filters.Subscriber("/image1/joint_centers/blue", Float64MultiArray)
         self.g_sub1 = message_filters.Subscriber("/image1/joint_centers/green", Float64MultiArray)
         self.r_sub1 = message_filters.Subscriber("/image1/joint_centers/red", Float64MultiArray)
+        self.target_sub1 = message_filters.Subscriber("/image1/target_center", Float64MultiArray)
 
         self.y_sub2 = message_filters.Subscriber("/image2/joint_centers/yellow", Float64MultiArray)
         self.b_sub2 = message_filters.Subscriber("/image2/joint_centers/blue", Float64MultiArray)
         self.g_sub2 = message_filters.Subscriber("/image2/joint_centers/green", Float64MultiArray)
         self.r_sub2 = message_filters.Subscriber("/image2/joint_centers/red", Float64MultiArray)
-
-        self.target_sub1 = message_filters.Subscriber("/image1/target_center", Float64MultiArray)
         self.target_sub2 = message_filters.Subscriber("/image2/target_center", Float64MultiArray)
-
-        #self.joint_angle_1 = rospy.Subscriber("/robot/joint1_position_controller/command", Float64)
-        #self.joint_angle_2 = rospy.Subscriber("/robot/joint2_position_controller/command", Float64)
-        #self.joint_angle_3 = rospy.Subscriber("/robot/joint3_position_controller/command", Float64)
-        #self.joint_angle_4 = rospy.Subscriber("/robot/joint1_position_controller/command", Float64)
-
-
-        #Initialize publisher to move joint 1 
-        self.joint1_pub = rospy.Publisher("/robot/joint1_position_controller/command", Float64, queue_size=10)
-        #initialize a publisher to move the joint2
-        self.joint2_pub = rospy.Publisher("/robot/joint2_position_controller/command", Float64, queue_size=10)
-        #initialize a publisher to move the joint3
-        self.joint3_pub = rospy.Publisher("/robot/joint3_position_controller/command", Float64, queue_size=10)
-        #initialize a publisher to move the joint4
-        self.joint4_pub = rospy.Publisher("/robot/joint4_position_controller/command", Float64, queue_size=10)
+        self.yz = rospy.Publisher("/robot/yellow_z", Float64, queue_size=10)
+        self.bz = rospy.Publisher("/robot/blue_z", Float64, queue_size=10)
+        self.gz = rospy.Publisher("/robot/green_z", Float64, queue_size=10)
+        self.rz = rospy.Publisher("/robot/red_z", Float64, queue_size=10)
 
         # synchronise incoming channels using the timestamps contained in their headers
         # slop defines the delay in seconds with which messages are synchronized
@@ -96,7 +85,7 @@ class controller:
         else:
             self.x_red == image_1_coordinates[1].data[0]
 
-        print(self.x_yellow, self.x_blue, self.x_green, self.x_red)
+        #print(self.x_yellow, self.x_blue, self.x_green, self.x_red)
 
     def get_y(self, image_2_coordinates):
         
@@ -124,7 +113,7 @@ class controller:
         else:
             self.y_red == image_2_coordinates[1].data[0]
 
-        print(self.y_yellow, self.y_blue, self.y_green, self.y_red)
+        #print(self.y_yellow, self.y_blue, self.y_green, self.y_red)
 
     def get_z(self, image_1_coordinates, image_2_coordinates):
         #Regard z-value of blue joint as "baseline" for green joint and z-value of yellow
@@ -169,7 +158,7 @@ class controller:
         else:
             self.z_red = (r1_z+r2_z)/2
 
-        print(self.z_yellow, self.z_blue, self.z_green, self.z_red)
+        #print(self.z_yellow, self.z_blue, self.z_green, self.z_red)
 
         # Note: Image 2 - xz plane; Image 1 - yz plane
 
@@ -324,26 +313,125 @@ class controller:
     def get_inverse_jacobian(self, j):
         return np.linalg.pinv(j)
 
+    def blue_joint_rotation(self, green_joint):
+
+        #Assume we are at a joint rotation of 0 for both joints
+        theta2 = 0.0
+        theta3 = 0.0
+
+        green_curr = Matrix([[0.0],[0.0],[6.0]])
+
+        a, b, c = symbols('a b c')
+
+        #Treat green joint as end effector, act as if blue had been rotated by 0 degrees and we wanted to see how to get to the desired position of the green joint
+        #First, get the forward kinematics function up until green (treating green as the end effector)
+        a01 = a_0_1(0.0)
+        a02 = a01*a_1_2(b)
+        a03 = a02*a_2_3(c)
+
+        #get the jacobian of this function
+        xx = a03.col(3).row(0)
+        yy = a03.col(3).row(1)
+        zz = a03.col(3).row(2)
+
+        jacobian = Matrix([
+            [diff(xx, a), diff(xx,b), diff(xx, c)],
+            [diff(yy, a), diff(yy,b), diff(yy, c)],
+            [diff(zz, a), diff(zz,b), diff(zz, c)]
+        ])
+
+        #get pseudo-inverse jacobian
+        j_inv = jacobian.pinv()
+
+        coordinate_difference = green_curr-green_joint
+        current_error = coordinate_difference
+        delta_t = 1
+
+        q_dot = j_inv*(current_error)
+        q_dot = q_dot.subs(b, theta2)
+        q_dot = q_dot.subs(c, theta3)
+
+        print(q_dot) 
+
+    def last_attempt(self, bg):
+        a,b = symbols('a b')
+        rot_x = Matrix([[sp.cos(a), -sp.sin(a), 0, 0], [sp.sin(a), sp.cos(a), 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
+        rot_y = Matrix([[sp.sin(b), -sp.cos(b), 0, 0], [sp.cos(b), sp.sin(b), 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
+        arr = Matrix([[0.0], [0.0], [1.0], [1.0]])
+
+        transform = rot_x*rot_y*arr
+
+        x = Eq(sp.asin(a)*sp.asin(b), bg[0,0])
+        y = Eq(-sp.acos(a)*sp.asin(b), bg[1,0])
+        z = Eq(sp.acos(b), bg[2,0])
+
+        print(sp.solve((x,y,z), (b)))
+
+    def rotation_matrix_from_vectors(self, vec1, vec2):
+        """ Find the rotation matrix that aligns vec1 to vec2
+        :param vec1: A 3d "source" vector
+        :param vec2: A 3d "destination" vector
+        :return mat: A transform matrix (3x3) which when applied to vec1, aligns it with vec2.
+        """
+        a, b = (vec1 / np.linalg.norm(vec1)).reshape(3), (vec2 / np.linalg.norm(vec2)).reshape(3)
+        v = np.cross(a, b)
+        c = np.dot(a, b)
+        s = np.linalg.norm(v)
+        kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
+        rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
+        a = np.arctan2(rotation_matrix[2,1], rotation_matrix[2,2])
+        b = np.arctan2(-rotation_matrix[2,0], np.sqrt((rotation_matrix[2,1]**2)+rotation_matrix[2,2]**2))
+        c = np.arctan2(rotation_matrix[1,0], rotation_matrix[0,0])
+        print(a,b,c)
+        return rotation_matrix
+
+
+
     def task_2_1(self):
         #First we need the forwards kinematics equations, giving the thetas as variables
         a = 0.0
         b, c, d = symbols('b c d')
 
+        x_rot=Matrix([[sp.cos(b), -sp.sin(b), 0, 0], [sp.sin(b), sp.cos(b), 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
+        y_rot=Matrix([[sp.cos(c), -sp.sin(c), 0, 0], [sp.sin(c), sp.cos(c), 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
+        init = Matrix([[0.0], [0.0], [1.0], [1.0]])
+        diff_1_3_y = self.blue_3d[1]-self.green_3d[1]
+        diff_1_3_x = self.blue_3d[0]-self.green_3d[0]
+        diff_1_3_z = self.blue_3d[2]-self.green_3d[2]
+        diff_1_3_x = self.blue_3d[0]-self.green_3d[0]
+        diff_1_3_y = self.blue_3d[1]-self.green_3d[1]
+        diff_1_3_z = self.blue_3d[2]-self.green_3d[2]
+        v = Matrix([[diff_1_3_x], [diff_1_3_y], [diff_1_3_z], [1]])
+        transform= (x_rot*y_rot*v)
+        print(transform)
+
         #Get the frame transformations
         a01 = a_0_1(a)
-        a02 = a01*a_1_2(b)
-        a03 = a02*a_2_3(c)
-        a04 = a03*a_3_4(d)
-
+        
         #We do not need to compute a, since joint 1 is fixed and hence we will always have a=0.0
         #To compute the angle of joint 2, we need the coordinates of the center of joint 2 and joint 4 and subtract them
-        diff_2_4_z = self.z_blue-self.z_green
-        diff_2_4_y = self.y_blue-self.y_green
         
-        #Compute the arctan
-        theta2 = np.arctan2(diff_2_4_z, diff_2_4_y)
-
-        print(theta2)
+        #v = Matrix([[diff_1_3_x], [diff_1_3_y], [diff_1_3_z], [1]])
+        #print(a01.shape)
+        #mtx = (a01.inv())*v
+        #m = sp.atan(mtx[1,0]/mtx[0,0])
+        #a02 = a_1_2(m)*a01
+        #mtx2 = a02.inv()*v
+        #m2 = sp.atan(mtx2[2,0]/mtx2[1,0])
+        #a03 = (a_2_3(m2)*a02)
+        #theta2 = np.arctan2(mtx.row(1).col(0), mtx.row(2).col(0))
+        #transform = mtx.inv()*v
+        #mtx3 = a03.inv()*mtx2
+        #m3 = sp.atan(mtx3[1,0]/mtx3[0,0])
+        #a03 = a_3_4(m3)*a03
+        #mtx4 = a03.inv()*mtx3
+        #m3 = np.arctan2(mtx4[2,0], mtx[1,0])
+        
+        #theta3 = np.arctan2(transform.row(1), transform.row(2))
+        #print(m, m2)
+        
+        #a03 = a_2_3(c)*a02
+        #a04 = a_3_4(d)*a03
 
 
     """
@@ -386,23 +474,29 @@ class controller:
         self.image_1_coordinates = np.array([y1, b1, g1, r1])
         self.image_2_coordinates = np.array([y2, b2, g2, r2])
 
-        self.get_z()
-        self.get_x()
-        self.get_y()
-
-        self.task_2_1()
+        self.get_z(self.image_1_coordinates, self.image_2_coordinates)
+        self.get_x(self.image_2_coordinates)
+        self.get_y(self.image_1_coordinates)
+        
 
         # Get coordinates from the two images and change the values to make them with respect to yellow center in meters
-        #self.create_new_3d_coordinates_from_data(y1, b1, g1, r1, y2, b2, g2, r2,target1, target2)
-        #self.changeAxis()
+        self.create_new_3d_coordinates_from_data(y1, b1, g1, r1, y2, b2, g2, r2,target1, target2)
+        self.changeAxis()
+        point = fk_green(0.0, 1.0, 1.0)
+        print(point.col(3))
+        #m_a = np.array([[0.0], [0.0], [6.0]])
+        [-2.94514844682764], [1.59127049694494], [3.52174303604250]
+        self.last_attempt(Matrix([[-2.94514844682764],[1.59127049694494],[0.02174303604250], [0.0]]))
+        #self.task_2_1()
+        #self.blue_joint_rotation(Matrix([[0.0], [3.5], [2.5]]))
+        #print(self.rotation_matrix_from_vectors(m_a, m_b))
         #q = self.closed_loop_control(0.0, 0.0, 0.0, 0.0, self.red_3d)
         try:
             #publish new joint angles
-            #self.joint1_pub.publish(q[0])
-            #self.joint2_pub.publish(q[1])
-            #self.joint3_pub.publish(q[2])
-            #self.joint4_pub.publish(q[3])
-            print(q[0])
+            self.yz.publish(self.yellow_3d[2])
+            self.bz.publish(self.blue_3d[2])
+            self.gz.publish(self.green_3d[2])
+            self.rz.publish(self.red_3d[2])
 
         except CvBridgeError as e:
             print(e)

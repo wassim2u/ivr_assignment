@@ -85,7 +85,6 @@ class image_converter_2:
     if (area < 0.0001):
       self.is_circle_visible[color] = False
       return self.previous_circle_positions[color]
-
     else:
       self.is_circle_visible[color] = True
 
@@ -163,7 +162,7 @@ class image_converter_2:
     line_thickness = 2
     cv2.circle(new_img, (int(center[0]), int(center[1])), int(radius), color, line_thickness)
     cv2.imshow('Image with predicted shape of circle', new_img)
-    cv2.waitKey(1)
+    # cv2.waitKey(1)
 
 
   # Recieve data, process it, and publish

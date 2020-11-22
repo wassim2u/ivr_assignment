@@ -194,7 +194,7 @@ class image_converter_1:
     line_thickness = 2
     cv2.circle(new_img, (int(center[0]), int(center[1])), int(radius), color, line_thickness)
     cv2.imshow('Image with predicted shape of circle', new_img)
-    cv2.waitKey(1)
+    # cv2.waitKey(1)
 
 
 

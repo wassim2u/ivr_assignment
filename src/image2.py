@@ -138,10 +138,10 @@ class image_converter_2:
           # Target shape has been detected
           self.is_target_visible = True
 
-        # If the target is not visible, return the center positions calculated previously
-        if (not self.is_target_visible):
-          print("TARGET NOT VISIBLE")
-          return self.previous_target_positions
+      # If the target is not visible, return the center positions calculated previously
+      if (not self.is_target_visible):
+        print("TARGET NOT VISIBLE")
+        return self.previous_target_positions
 
       contour_poly = cv2.approxPolyDP(curve=sphere_contour, epsilon=0.1, closed=True)
       # Using the outline, draw a circle that encloses the partial segment of the circle that is hidden

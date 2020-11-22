@@ -114,6 +114,7 @@ class image_converter_1:
     #If the circle is completely hidden, return the previous value
     if (area<0.0001):
       self.is_circle_visible[color] = False
+      return self.previous_circle_positions[color]
     else:
       self.is_circle_visible[color] = True
 
@@ -277,9 +278,9 @@ class image_converter_1:
     try:
       self.image_pub1.publish(self.bridge.cv2_to_imgmsg(self.cv_image1, "bgr8"))
       #publish new joint angles
-      # self.joint2_pub.publish(self.joint2_angle)
-      # self.joint3_pub.publish(self.joint3_angle)
-      # self.joint4_pub.publish(self.joint4_angle)
+      self.joint2_pub.publish(self.joint2_angle)
+      self.joint3_pub.publish(self.joint3_angle)
+      self.joint4_pub.publish(self.joint4_angle)
 
       #publish joint centers with coordinates (y,z) taken from image 1
       self.joint_centers_yellow_pub1.publish(self.y_center)

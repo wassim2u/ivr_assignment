@@ -84,6 +84,8 @@ class image_converter_2:
     # If the circle is completely hidden, return the previous value
     if (area < 0.0001):
       self.is_circle_visible[color] = False
+      return self.previous_circle_positions[color]
+
     else:
       self.is_circle_visible[color] = True
 

@@ -30,6 +30,7 @@ class controller:
         self.g_sub1 = message_filters.Subscriber("/image1/joint_centers/green", Float64MultiArray)
         self.r_sub1 = message_filters.Subscriber("/image1/joint_centers/red", Float64MultiArray)
         self.target_sub1 = message_filters.Subscriber("/image1/target_center", Float64MultiArray)
+        self.box_sub1 = message_filters.Subscriber("/image1/box_center", Float64MultiArray)
 
         self.y_sub2 = message_filters.Subscriber("/image2/joint_centers/yellow", Float64MultiArray)
         self.b_sub2 = message_filters.Subscriber("/image2/joint_centers/blue", Float64MultiArray)
@@ -48,12 +49,18 @@ class controller:
         self.joint2_t2 = rospy.Publisher("/robot/theta2", Float64, queue_size=10)
         self.joint3_t3 = rospy.Publisher("/robot/theta3", Float64, queue_size=10)
 
+        self.target_3d_pub = rospy.Publisher("task2_2/target_3d", Float64MultiArray, queue_size=10)
+        self.end_effector_FK_pub = rospy.Publisher("task3_1/end_effector_position/FK", Float64MultiArray, queue_size=10)
+        self.end_effector_vision_pub = rospy.Publisher("task3_1/end_effector_position/vision", Float64MultiArray, queue_size=10)
+
+
+
         # synchronise incoming channels using the timestamps contained in their headers
         # slop defines the delay in seconds with which messages are synchronized
         ts = message_filters.ApproximateTimeSynchronizer([
                                                         self.y_sub1, self.b_sub1, self.g_sub1, self.r_sub1,
                                                         self.y_sub2, self.b_sub2, self.g_sub2, self.r_sub2,
-                                                        self.target_sub1, self.target_sub2
+                                                        self.target_sub1, self.target_sub2,
                                                         ],
                                                         queue_size=10,slop= 0.1, allow_headerless=True)
         ts.registerCallback(self.callback)
@@ -159,58 +166,84 @@ class controller:
         else:
             self.z_red = (r1_z+r2_z)/2
 
-        #print(self.z_yellow, self.z_blue, self.z_green, self.z_red)
+        print(self.z_yellow, self.z_blue, self.z_green, self.z_red)
 
         # Note: Image 2 - xz plane; Image 1 - yz plane
 
     def create_new_3d_coordinates_from_data(self, y1, b1, g1, r1, y2, b2, g2, r2, target1, target2):
-        self.yellow_center1 = np.asarray(y1.data)
+        self.yellow_center1 = (np.asarray(y1.data))
         self.blue_center1 = np.asarray(b1.data)
         self.green_center1 = np.asarray(g1.data)
-        self.red_center1 = np.asarray(r1.data)
+        self.red_center1 = (np.asarray(r1.data))
         self.target_center1 = np.asarray(target1.data)
+        # self.box_center1 = np.asarray(box1.data)
 
-        self.yellow_center2 = np.asarray(y2.data)
+
+        self.yellow_center2 = (np.asarray(y2.data))
         self.blue_center2 = np.asarray(b2.data)
         self.green_center2 = np.asarray(g2.data)
-        self.red_center2 = np.asarray(r2.data)
+        self.red_center2 = (np.asarray(r2.data))
         self.target_center2 = np.asarray(target2.data)
+        # self.box_center2 = np.asarray(box2.data)
 
         # blue and yellow should always on the same x and y-axis:
         self.blue_center1[0] = self.yellow_center1[0]
         self.blue_center2[0] = self.yellow_center2[0]
 
 
-        self.z_center = (self.yellow_center1[1] + self.yellow_center2[1])/2
-        self.z_blue = (self.blue_center1[1] + self.blue_center2[1])/2
-        self.z_green = (self.green_center1[1] + self.green_center2[1])/2
-        self.z_red = (self.red_center1[1] + self.red_center2[1])/2
-        self.z_target = (self.target_center1[1] + self.target_center2[1])/2
+        z_center = (self.yellow_center1[1] + self.yellow_center2[1])/2
+        z_blue = (self.blue_center1[1] + self.blue_center2[1])/2
+        z_green = (self.green_center1[1] + self.green_center2[1])/2
+        z_red = (self.red_center1[1] + self.red_center2[1])/2
+        z_target = (self.target_center1[1] + self.target_center2[1])/2
+        # z_box = (self.box_center1[1]+ self.box_center2[1])/2
+
 
         # z of green must not be below z of blue (due to the configuration space of the joint, being -pi/2, pi/2)
         # These are measured in pixel coordinates, so our z positive is downwards here
-        if self.z_green > self.z_blue:
-            self.z_green = self.z_blue
+        if z_green > z_blue:
+            z_green = z_blue
 
 
-        self.yellow_3d = np.array([self.yellow_center2[0], self.yellow_center1[0], self.z_center])
-        self.blue_3d = np.array([self.blue_center2[0], self.blue_center1[0], self.z_blue])
-        self.green_3d = np.array([self.green_center2[0], self.green_center1[0], self.z_green])
-        self.red_3d = np.array([self.red_center2[0], self.red_center1[0], self.z_red])
-        self.target_3d = np.array([self.target_center2[0], self.target_center1[0], self.z_target])
-
+        self.yellow_3d = np.array([self.yellow_center2[0], self.yellow_center1[0], z_center])
+        self.blue_3d = np.array([self.blue_center2[0], self.blue_center1[0], z_blue])
+        self.green_3d = np.array([self.green_center2[0], self.green_center1[0], z_green])
+        self.red_3d = np.array([self.red_center2[0], self.red_center1[0], z_red])
+        self.target_3d = np.array([self.target_center2[0], self.target_center1[0], z_target])
+        # self.box_3d = np.array([self.box_center2[0], self.box_center1[0], z_box])
 
     def changeAxis(self):
         new_yellow_3d = np.array([0, 0, 0])
         new_blue_3d = self.yellow_3d - self.blue_3d
         new_green_3d = self.yellow_3d - self.green_3d
         new_red_3d = self.yellow_3d - self.red_3d
+        new_target_3d = self.yellow_3d - self.target_3d
+        # new_box_3d = self.yellow_3d - self.box_3d
         ratio = 0.0389
         print("Ratio:" + str(ratio))
         self.yellow_3d = new_yellow_3d
         self.blue_3d = new_blue_3d * 0.0389
         self.green_3d = new_green_3d * 0.0389
         self.red_3d = new_red_3d * 0.0389
+        self.target_3d = new_target_3d * 0.0389
+        # self.box_3d = new_box_3d * 0.0389
+        
+        #negate x 
+        self.yellow_3d[0] = - self.yellow_3d[0]
+        self.blue_3d[0] = - self.blue_3d[0]
+        self.green_3d[0] = - self.green_3d[0]
+        self.red_3d[0] = - self.red_3d[0]
+        self.target_3d[0] = - self.target_3d[0]
+        # self.box_3d[0] = - self.box_3d[0]
+
+        #negate y
+        self.yellow_3d[1] = - self.yellow_3d[1]
+        self.blue_3d[1] = - self.blue_3d[1]
+        self.green_3d[1] = - self.green_3d[1]
+        self.red_3d[1] = - self.red_3d[1]
+        self.target_3d[1] = - self.target_3d[1]
+        # self.box_3d[1] = -self.box_3d[1]
+
         print("Values changed to meters:")
         print("Yellow " + str(self.yellow_3d))
         print("Blue:" + str(self.blue_3d))
@@ -331,7 +364,34 @@ class controller:
         angles_file.close()
         print("Successfully written to files.")
     """
-            
+    def task4_2(self, end_effector, box_obstacle):
+        constant_k = 0.3 #Should be positive constant
+        #Cost function is distance between  end effector and box squared.
+        # Maximise this secondary task , ie) maximise the distance, to avoid  the box
+        cost = np.transpose(end_effector - box_obstacle).dot(end_effector - box_obstacle)
+        secondary_task = constant_k.dot(sp.diff(cost,q)) #differntiate with respect to q : w for q - w for next q / delta q
+        identity = np.ones(4,4)
+        #qdot is joint velocity
+        qdot = psuedo_jacobian.dot(end_effector_velocity) + (identity - pseudo_jacobian.dot(jacobian))*secondary_task
+        new_q = angles + dt * q_dot
+        return new_q
+
+    ###Functions to move joints 2-4 ###
+    def move_joint2(self, t):
+        return (np.pi / 2) * np.sin((np.pi / 15.0) * t)
+
+    def move_joint3(self, t):
+        return (np.pi / 2) * np.sin((np.pi / 18.0) * t)
+
+    def move_joint4(self, t):
+        return (np.pi / 2) * np.sin((np.pi / 20.0) * t)
+
+    def compute_joint_angles(self):
+        time = rospy.get_time()
+        joint2_angle = self.move_joint2(time)
+        joint3_angle = self.move_joint3(time)
+        joint4_angle = self.move_joint4(time)
+        return joint2_angle, joint3_angle, joint4_angle
 
     def callback(self,y1,b1,g1,r1,y2,b2,g2,r2, target1, target2):
         self.image_1_coordinates = np.array([y1, b1, g1, r1])
@@ -359,7 +419,7 @@ class controller:
         except CvBridgeError as e:
             print(e)
 
-
+    
 
 # call the class
 def main(args):

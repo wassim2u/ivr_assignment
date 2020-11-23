@@ -37,7 +37,7 @@ def convert_pixel_to_metres(blue, yellow):
   dist1 = np.sqrt(s1)
   dist2 = np.sqrt(s2)
   average_dist = (dist1+dist2)/2.0
-  return 2.5/dist
+  return 2.5/average_dist
 
 def get_center(cv_image):
   lower_yellow = np.array([0,100,100])

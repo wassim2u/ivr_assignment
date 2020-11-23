@@ -37,6 +37,17 @@ class controller:
         self.r_sub2 = message_filters.Subscriber("/image2/joint_centers/red", Float64MultiArray)
         self.target_sub2 = message_filters.Subscriber("/image2/target_center", Float64MultiArray)
 
+        #initialize a publisher to move the joint2
+        self.joint2_pub = rospy.Publisher("/robot/joint2_position_controller/command", Float64, queue_size=10)
+        #initialize a publisher to move the joint3
+        self.joint3_pub = rospy.Publisher("/robot/joint3_position_controller/command", Float64, queue_size=10)
+        #initialize a publisher to move the joint4
+        self.joint4_pub = rospy.Publisher("/robot/joint4_position_controller/command", Float64, queue_size=10)
+
+        #initialize a publisher for joint angle
+        self.joint2_t2 = rospy.Publisher("/robot/theta2", Float64, queue_size=10)
+        self.joint3_t3 = rospy.Publisher("/robot/theta3", Float64, queue_size=10)
+
         # synchronise incoming channels using the timestamps contained in their headers
         # slop defines the delay in seconds with which messages are synchronized
         ts = message_filters.ApproximateTimeSynchronizer([
@@ -56,13 +67,22 @@ class controller:
         self.Kd = np.array([[0.1, 0], [0, 0.1]])
         self.blue_center = Matrix([[0.0], [0.0], [2.5]])
 
-    def trajectory():
-        t = rospy.get_time()
-        theta2 = (np.pi/2)*np.sin((np.pi/15.0)*t)
-        theta3 = (np.pi/2)*np.sin((np.pi/18.0)*t)
-        theta4 = (np.pi/2)*np.sin((np.pi/20.0)*t)
-        target = fk_matrix(0.0, theta2, theta3, theta4)
-        return theta2, theta3, theta4, target
+      ###Functions to move joints 2-4 ###
+    def move_joint2(self, t):
+        return (np.pi/3)*np.sin((np.pi/15.0)*t)
+
+    def move_joint3(self, t):
+        return (np.pi/3)*np.sin((np.pi/18.0)*t)
+
+    def move_joint4(self, t):
+        return (np.pi/3)*np.sin((np.pi/20.0)*t)
+
+    def compute_joint_angles(self):
+        time = rospy.get_time()
+        joint2_angle = self.move_joint2(time)
+        joint3_angle = self.move_joint3(time)
+        joint4_angle = self.move_joint4(time)
+        return joint2_angle, joint3_angle, joint4_angle
 
 
 
@@ -74,23 +94,10 @@ class controller:
         self.x_green = 0.0
         self.x_red = 0.0
         
-        if (image_1_coordinates[2].data[0] == 0.0):
-            if (self.z_green == self.z_blue):
-                self.x_green == self.x_blue
-            elif (self.z_green == self.z_yellow):
-                self.x_green == self.x_yellow
-        else:
-            self.x_green == image_1_coordinates[2].data[0]
+        self.x_green == image_1_coordinates[2].data[0]
 
-        if (image_1_coordinates[3].data[0] == 0.0):
-            if (self.z_red == self.z_green):
-                self.x_red = self.x_green
-            elif (self.z_red == self.z_blue):
-                self.x_red = self.x_blue
-            elif (self.z_red == self.z_yellow):
-                self.x_red = self.x_yellow
-        else:
-            self.x_red == image_1_coordinates[1].data[0]
+        
+        self.x_red == image_1_coordinates[1].data[0]
 
         #print(self.x_yellow, self.x_blue, self.x_green, self.x_red)
 
@@ -101,25 +108,10 @@ class controller:
 
         self.y_green = 0.0
         self.y_red = 0.0
-        
-        if (image_2_coordinates[2].data[0] == 0.0):
-            if (self.z_green == self.z_blue):
-                self.y_green == self.y_blue
-            elif (self.z_green == self.z_yellow):
-                self.y_green == self.y_yellow
-        else:
-            self.y_green == image_2_coordinates[2].data[0]
 
-        if (image_2_coordinates[3].data[0] == 0.0):
-            if (self.z_red == self.z_green):
-                self.y_red = self.y_green
-            elif (self.z_red == self.z_blue):
-                self.y_red = self.y_blue
-            elif (self.z_red == self.z_yellow):
-                self.y_red = self.y_yellow
-        else:
-            self.y_red == image_2_coordinates[1].data[0]
+        self.y_green == image_2_coordinates[2].data[0]
 
+        self.y_red == image_2_coordinates[1].data[0]
         #print(self.y_yellow, self.y_blue, self.y_green, self.y_red)
 
     def get_z(self, image_1_coordinates, image_2_coordinates):
@@ -138,7 +130,8 @@ class controller:
 
         #if the green joint is obstructed, get the z-value from other camera for green joint and
         # use x or y value from obstructing joint
-        if (image_1_coordinates[2].data[1] == 0.0):
+        """
+        if (image_1_coordinates[2].data[1] == 1234.0):
             g1_z = image_2_coordinates[2].data[1]
             g2_z = image_2_coordinates[2].data[1]
         elif (image_2_coordinates[2].data[1] == 0.0):
@@ -151,6 +144,7 @@ class controller:
         elif (image_2_coordinates[3].data[1] == 0.0):
             r2_z = image_1_coordinates[3].data[1]
             r1_z = image_1_coordinates[3].data[1]
+        """
         #if z_green or z_red is below z_blue in both pictures, set their z-value to that
         #of z_blue
         #First, check green
@@ -298,22 +292,8 @@ class controller:
         xy_plane = Matrix([[0,0,1]])
 
         joint1 = Matrix([[self.blue_3d[0]], [self.green_3d[1]], [self.green_3d[2]]])
-        joint2 = Matrix([[self.green_3d[0]], [self.green_3d[1]], [self.green_3d[2]]])
-        print(joint1)
-        print(joint2)
-
-        direction_j1j2 = self.get_direction(joint2, self.blue_center)
-
-        numerator3 = yz_plane*direction_j1j2
         
-        denominator = math.sqrt(sum([y**2 for y in direction_j1j2]))
-        theta3 = [sp.asin(x) for x in (numerator3/denominator)][0]
-
-        direction_j1j3 = self.get_direction(joint1, self.blue_center)
-        numerator2 = xz_plane*direction_j1j3
-        denominator2 = math.sqrt(sum([y**2 for y in direction_j1j3]))
-        theta2 = [sp.atan(x) for x in (numerator2/denominator2)][0]
-        return theta3, theta2
+        
 
 
 
@@ -353,16 +333,31 @@ class controller:
     """
             
 
-    def callback(self,y1,b1,g1,r1,y2,b2,g2,r2, target1, target2, theta2, theta3, theta4):
+    def callback(self,y1,b1,g1,r1,y2,b2,g2,r2, target1, target2):
         self.image_1_coordinates = np.array([y1, b1, g1, r1])
         self.image_2_coordinates = np.array([y2, b2, g2, r2])
+
+        self.joint2_angle = Float64()
+        self.joint3_angle = Float64()
+        self.joint4_angle = Float64()
+        self.joint2_angle,self.joint3_angle,self.joint4_angle = self.compute_joint_angles()
         
         # Get coordinates from the two images and change the values to make them with respect to yellow center in meters
         self.create_new_3d_coordinates_from_data(y1, b1, g1, r1, y2, b2, g2, r2,target1, target2)
         self.changeAxis()
-        
-        theta2, theta3, theta4, target = self.trajectory()
-        print(self.closed_loop_control(0.0, theta2, theta3, theta4, target))
+
+        self.compute_joint_angles()
+        joint2 = np.array([[self.green_3d[0]], [self.green_3d[1]], [self.green_3d[2]]])
+        #theta2, theta3, theta4, target = self.trajectory()
+        theta2, theta3 = get_joint2_3_angles(joint2)
+        try:
+            self.joint2_t2.publish(theta2)
+            self.joint3_t3.publish(theta3)
+            self.joint2_pub.publish(self.joint2_angle)
+            self.joint3_pub.publish(self.joint3_angle)
+            self.joint4_pub.publish(self.joint4_angle)
+        except CvBridgeError as e:
+            print(e)
 
 
 

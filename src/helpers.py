@@ -8,11 +8,13 @@ import numpy as np
 import tensorflow as tf
 import os
 import sympy as sp
-from sympy import symbols, diff, sin, cos, Matrix, Eq, nsolve
+from sympy import symbols, diff, sin, cos, Matrix, Eq, solveset, Interval
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from std_msgs.msg import Float64MultiArray, Float64
 from cv_bridge import CvBridge, CvBridgeError
+
+#domain = Interval([-sp.pi-0.1, sp.pi+0.1])
 
 
 def get_end_effector(cv_image):
@@ -179,35 +181,49 @@ def fk_green(theta1, theta2, theta3):
   return fk.col(3)
 
 def get_joint2_3_angles(joint4):
-  #Create variables for our system of equations
-  b, c = symbols('b c')
+
+  xx = joint4[0]
+  yy = joint4[1]
+  zz = joint4[2]
+
+  if xx > 3.5:
+    xx = 3.5
+  elif xx < -3.5:
+    xx = -3.5
+
+  if yy > 3.5:
+    yy = 3.5
+  elif yy < -3.5:
+    yy = -3.5
+
+  if zz > 6.0:
+    zz = 6.0
+  if zz < 2.5:
+    zz = 2.5
+
+  x = (((-1)/3.5)*xx)*1.1
+  if x > 1:
+    x = 1
+  elif x < -1:
+    x = -1
+
+  theta2 = np.arcsin(x)
+  y = (1/(3.5*np.cos(theta2)))*yy
+  if y > 1:
+    y = 1
+  elif y < -1:
+    y = -1
 
   #Use the forwards kinematics equation to derive a system of equations where the angles are the variables
-  x = (-1)*3.5*sp.sin(c)
-  y = 3.5*sp.sin(b)*sp.cos(c)
-  z = 3.5*sp.cos(b)*sp.cos(c)+2.5
-  x_expr = Eq(x, joint4[0])
-  
-  #First, solve x for c, since x only contains one variable
-  c_sol = nsolve((x_expr), c, 0)
+ 
+  theta3 = np.arcsin(y)
 
-  #Now, subsitute c into y
-  y = 3.5*sp.sin(b)*sp.cos(c_sol)
-  y_expr = Eq(y, joint4[1])
-  print(x_expr)
-  #Now solve y for b
-  b_sol = nsolve((y_expr), b, 0)
-  z = 3.5*sp.cos(b)*sp.cos(c_sol)+2.5
-  z_expr = Eq(z, joint4[2])
+  return theta2, theta3
 
-  b_sol_2 = nsolve(z_expr, b, 0)
-
-  return b_sol, c_sol
-
-def get_joint_4_angles(end_effector):
+def get_joint4_angles(theta2, theta3, end_effector):
   b, c, d = symbols('b c d')
-  
+  x = -sp.sin(theta3)*sp.cos(d)-3.5*sin(theta4)
+  x_expr = Eq(x, end_effector[0])
+  theta4 = nsolve((x_expr), d, 0)
 
-point = fk_green(0.0, 1.0, -0.5)
-print(point[0], point[1], point[2])
-get_joint_angles(Matrix([[point[0], point[1], point[2]]]))
+  print(fk_matrix(0.0, b, c, d).col(3))

@@ -41,10 +41,6 @@ class image_converter_1:
     self.joint_centers_red_pub1 = rospy.Publisher("/image1/joint_centers/red", Float64MultiArray, queue_size=10)
     self.target_center_pub1 = rospy.Publisher("/image1/target_center", Float64MultiArray, queue_size=10)
 
-    self.robot_joint2_pub = rospy.Publisher("/robot/joint_states/data[1]", Float64, queue_size=10)
-    self.robot_joint3_pub = rospy.Publisher("/robot/joint_states/data[2]", Float64, queue_size=10)
-    self.robot_joint4_pub = rospy.Publisher("/robot/joint_states/data[3]", Float64, queue_size=10)
-
     #These variables are used to keep track if the joint positions are visible
     self.circle_colorNames = ["Yellow","Blue","Green","Red"]
     self.previous_circle_positions = {"Yellow": [0.0,0.0], "Blue":[0.0,0.0], "Green":[0.0,0.0], "Red":[0.0,0.0]}
@@ -65,13 +61,13 @@ class image_converter_1:
 
     ###Functions to move joints 2-4 ###
   def move_joint2(self, t):
-    return (np.pi/2)*np.sin((np.pi/15.0)*t)
+    return (np.pi/3)*np.sin((np.pi/15.0)*t)
 
   def move_joint3(self, t):
-    return (np.pi/2)*np.sin((np.pi/18.0)*t)
+    return (np.pi/3)*np.sin((np.pi/18.0)*t)
 
   def move_joint4(self, t):
-    return (np.pi/2)*np.sin((np.pi/20.0)*t)
+    return (np.pi/3)*np.sin((np.pi/20.0)*t)
 
   def compute_joint_angles(self):
       time = rospy.get_time()
@@ -189,7 +185,7 @@ class image_converter_1:
     contours, hierarchy = cv2.findContours(mask, 1, 2)
     # Draw the outline on the binary image
     cv2.drawContours(img, contours, -1, (0, 255, 0), 1)
-    cv2.imshow('draw contours', img)
+    #cv2.imshow('draw contours', img)
     cv2.waitKey(1)
 
   # Draws a circle on the image. Call when needed for visualisation and to check result.
@@ -198,7 +194,7 @@ class image_converter_1:
     color = [255, 23, 0]
     line_thickness = 2
     cv2.circle(new_img, (int(center[0]), int(center[1])), int(radius), color, line_thickness)
-    cv2.imshow('Image with predicted shape of circle', new_img)
+    #cv2.imshow('Image with predicted shape of circle', new_img)
     # cv2.waitKey(1)
 
 
@@ -283,10 +279,11 @@ class image_converter_1:
     try:
       self.image_pub1.publish(self.bridge.cv2_to_imgmsg(self.cv_image1, "bgr8"))
       #publish new joint angles
-      self.robot_joint2_pub.publish(self.joint2_angle)
-      self.robot_joint3_pub.publish(self.joint3_angle)
-      self.robot_joint4_pub.publish(self.joint4_angle)
-
+      """
+      self.joint2_pub.publish(self.joint2_angle)
+      self.joint3_pub.publish(self.joint3_angle)
+      self.joint4_pub.publish(self.joint4_angle)
+      """
       #publish joint centers with coordinates (y,z) taken from image 1
       self.joint_centers_yellow_pub1.publish(self.y_center)
       self.joint_centers_blue_pub1.publish(self.b_center)

@@ -41,6 +41,17 @@ class image_converter_1:
     self.joint_centers_red_pub1 = rospy.Publisher("/image1/joint_centers/red", Float64MultiArray, queue_size=10)
     self.target_center_pub1 = rospy.Publisher("/image1/target_center", Float64MultiArray, queue_size=10)
 
+    self.robot_joint2_pub = rospy.Publisher("/robot/joint_states/data[1]", Float64, queue_size=10)
+    self.robot_joint3_pub = rospy.Publisher("/robot/joint_states/data[2]", Float64, queue_size=10)
+    self.robot_joint4_pub = rospy.Publisher("/robot/joint_states/data[3]", Float64, queue_size=10)
+
+    #These variables are used to keep track if the joint positions are visible
+    self.circle_colorNames = ["Yellow","Blue","Green","Red"]
+    self.previous_circle_positions = {"Yellow": [0.0,0.0], "Blue":[0.0,0.0], "Green":[0.0,0.0], "Red":[0.0,0.0]}
+    self.is_circle_visible = {"Yellow":True, "Blue":True, "Green":True, "Red":True}
+
+
+
     # These variables are used to keep track of target to be used when approximating the next position of
     # target when it is not visible
     self.is_target_visible = True
@@ -94,23 +105,8 @@ class image_converter_1:
 
 
 
+
   # Find center of a specific circle. The image returned from camera1 is of plane yz.
-  # TODO: Tackle cases of 0 area where circle is completely hidden
-  def find_color_center(self ,mask_color):
-    kernel = np.ones((3, 3), np.uint8)
-    dilated_mask = cv2.dilate(mask_color, kernel, iterations=3)
-    M = cv2.moments(dilated_mask)
-
-    if (self.is_visible(M['m00'])):
-      cy = int(M['m10'] / M['m00'])
-      cz = int(M['m01'] / M['m00'])
-      return np.array([cy, cz])
-    
-    return np.array([0.0, 0.0])
-
-
-
-  #TODO: Solve edge case for thiss well when its completely hidden
   # Find the outline of a binary image of a specific circle, and use minEnclosingCircle to predict the center of circle
   # that is partly hidden behind an object.
   #These do not detect the orange target or box coordinates. Refer to other functions for those
@@ -142,8 +138,7 @@ class image_converter_1:
     masks = cv2.inRange(hsv_image, (10, 0, 0), (24, 255, 255))
     kernel = np.ones((3, 3), np.uint8)
     opening_mask = cv2.morphologyEx(masks,cv2.MORPH_OPEN ,kernel)
-    #
-    center = self.predict_sphere_center(img, opening_mask)
+    center = self.predict_target_center(img, opening_mask)
     return center
 
   # Returns the center of the matched shape with the help of classifer (which should be sphere).
@@ -204,19 +199,15 @@ class image_converter_1:
     line_thickness = 2
     cv2.circle(new_img, (int(center[0]), int(center[1])), int(radius), color, line_thickness)
     cv2.imshow('Image with predicted shape of circle', new_img)
-    cv2.waitKey(1)
+    # cv2.waitKey(1)
 
 
 
   def update_target_positions(self,current_position):
     self.previous_target_positions = current_position
 
-
-
-
-  # Recieve data from camera 1, process it, and publish
-
-
+  def update_circle_positions(self,color, positions):
+    self.previous_circle_positions[color] = positions
 
 
   # Recieve data from camera 1, process it, and publish
@@ -233,20 +224,39 @@ class image_converter_1:
 
     cv2.imshow('window1', self.cv_image1)
     cv2.waitKey(1)
-    t = rospy.get_time()
-    ##Task 2##
 
-    fk = fk_matrix(0.0,0.0,0.0,-np.pi/2)
-    print(fk.col(3))
+    ##Task 2##
 
     masked_circles_image1 = self.detect_circles(self.cv_image1)
 
 
-    target_center= self.detect_sphere_target(self.cv_image1)
+    yellow_center, y_radius = self.predict_joint_center("Yellow", masked_circles_image1['Yellow'])
+    blue_center, bl_radius= self.predict_joint_center("Blue", masked_circles_image1['Blue'])
+    green_center, gr_radius= self.predict_joint_center("Green", masked_circles_image1['Green'])
+    red_center, r_radius = self.predict_joint_center("Red", masked_circles_image1['Red'])
+
+    # When the joint or end effector can be detected from this camera, update  positions of our target
+    for color in self.circle_colorNames:
+      if self.is_circle_visible[color] and color == "Yellow" :
+        self.update_circle_positions(color,yellow_center)
+
+      if self.is_circle_visible[color] and color == "Blue":
+        self.update_circle_positions(color,blue_center)
+
+      if self.is_circle_visible[color] and color == "Green":
+        self.update_circle_positions(color, green_center)
+
+      if self.is_circle_visible[color] and color == "Red":
+        self.update_circle_positions(color, red_center)
+
+    target_center = self.detect_sphere_target(self.cv_image1)
     #When the target can be detected from this camera, update  positions of our target
     if self.is_target_visible:
       print("target visible")
       self.update_target_positions(target_center)
+
+
+
 
     self.y_center = Float64MultiArray()
     self.y_center.data = yellow_center
@@ -259,29 +269,23 @@ class image_converter_1:
     self.target_sphere_center = Float64MultiArray()
     self.target_sphere_center.data = target_center
 
-    """This is for task 3.1 to record the images of the robot at different angles
-    angle_str = "1.0472 -0.7854 1.5708 0.3491"
-    angle_split = angle_str.split()
-    angles = [float(i) for i in angle_split]
-    """
+
+    ########
 
     # update to current time
     self.time = rospy.get_time()
 
-    self.joint1_angle = Float64()
     self.joint2_angle = Float64()
     self.joint3_angle = Float64()
     self.joint4_angle = Float64()
-    self.joint2_angle = self.move_joint2(t)
-    self.joint3_angle = self.move_joint3(t)
-    self.joint4_angle = self.move_joint4(t)
+    self.joint2_angle,self.joint3_angle,self.joint4_angle = self.compute_joint_angles()
     # Publish the results
     try:
       self.image_pub1.publish(self.bridge.cv2_to_imgmsg(self.cv_image1, "bgr8"))
       #publish new joint angles
-      self.joint2_pub.publish(self.joint2_angle)
-      self.joint3_pub.publish(self.joint3_angle)
-      self.joint4_pub.publish(self.joint4_angle)
+      self.robot_joint2_pub.publish(self.joint2_angle)
+      self.robot_joint3_pub.publish(self.joint3_angle)
+      self.robot_joint4_pub.publish(self.joint4_angle)
 
       #publish joint centers with coordinates (y,z) taken from image 1
       self.joint_centers_yellow_pub1.publish(self.y_center)
@@ -306,5 +310,6 @@ def main(args):
 # run the code if the node is called
 if __name__ == '__main__':
     main(sys.argv)
+
 
 

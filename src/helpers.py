@@ -8,7 +8,7 @@ import numpy as np
 import tensorflow as tf
 import os
 import sympy as sp
-from sympy import symbols, diff, sin, cos, Matrix
+from sympy import symbols, diff, sin, cos, Matrix, Eq, nsolve
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from std_msgs.msg import Float64MultiArray, Float64
@@ -176,7 +176,38 @@ def fk_green(theta1, theta2, theta3):
   mtx_1_2 = a_1_2(theta2)
   mtx_2_3 = a_2_3(theta3)
   fk = mtx_0_1*mtx_1_2*mtx_2_3
-  return fk
+  return fk.col(3)
 
+def get_joint2_3_angles(joint4):
+  #Create variables for our system of equations
+  b, c = symbols('b c')
 
+  #Use the forwards kinematics equation to derive a system of equations where the angles are the variables
+  x = (-1)*3.5*sp.sin(c)
+  y = 3.5*sp.sin(b)*sp.cos(c)
+  z = 3.5*sp.cos(b)*sp.cos(c)+2.5
+  x_expr = Eq(x, joint4[0])
+  
+  #First, solve x for c, since x only contains one variable
+  c_sol = nsolve((x_expr), c, 0)
 
+  #Now, subsitute c into y
+  y = 3.5*sp.sin(b)*sp.cos(c_sol)
+  y_expr = Eq(y, joint4[1])
+  print(x_expr)
+  #Now solve y for b
+  b_sol = nsolve((y_expr), b, 0)
+  z = 3.5*sp.cos(b)*sp.cos(c_sol)+2.5
+  z_expr = Eq(z, joint4[2])
+
+  b_sol_2 = nsolve(z_expr, b, 0)
+
+  return b_sol, c_sol
+
+def get_joint_4_angles(end_effector):
+  b, c, d = symbols('b c d')
+  
+
+point = fk_green(0.0, 1.0, -0.5)
+print(point[0], point[1], point[2])
+get_joint_angles(Matrix([[point[0], point[1], point[2]]]))

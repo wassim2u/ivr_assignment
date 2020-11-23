@@ -32,6 +32,11 @@ class image_converter_2:
     self.joint_centers_red_pub2 = rospy.Publisher("/image2/joint_centers/red", Float64MultiArray, queue_size=10)
     self.target_center_pub2 = rospy.Publisher("/image2/target_center", Float64MultiArray, queue_size=10)
 
+    # These variables are used to keep track if the joint positions are visible
+    self.circle_colorNames = ["Yellow", "Blue", "Green", "Red"]
+    self.previous_circle_positions = {"Yellow": [0.0, 0.0], "Blue": [0.0, 0.0], "Green": [0.0, 0.0], "Red": [0.0, 0.0]}
+    self.is_circle_visible = {"Yellow": True, "Blue": True, "Green": True, "Red": True}
+
 
     #These variables are used to keep track of target  to be used when approximating the next position of
     #target when it is not visible
@@ -80,7 +85,6 @@ class image_converter_2:
     if (area < 0.0001):
       self.is_circle_visible[color] = False
       return self.previous_circle_positions[color]
-
     else:
       self.is_circle_visible[color] = True
 
@@ -148,6 +152,9 @@ class image_converter_2:
   def update_target_positions(self, current_position):
     self.previous_target_positions = current_position
 
+  def update_circle_positions(self, color, positions):
+    self.previous_circle_positions[color] = positions
+
   # Draws a circle on the image. Call when needed for visualisation and to check result.
   def draw_circle_prediction(self, img, center, radius):
     new_img = img.copy()
@@ -155,7 +162,7 @@ class image_converter_2:
     line_thickness = 2
     cv2.circle(new_img, (int(center[0]), int(center[1])), int(radius), color, line_thickness)
     cv2.imshow('Image with predicted shape of circle', new_img)
-    cv2.waitKey(1)
+    # cv2.waitKey(1)
 
 
   # Recieve data, process it, and publish
@@ -173,13 +180,27 @@ class image_converter_2:
 
     ##Task 2##
     masked_circles = self.detect_circles(self.cv_image2)
-    # Get Centers of each joint and end effector(red). 
-    yellow_center, yellow_radius = self.predict_circle_center2(masked_circles['Yellow'])
-    blue_center, blue_radius = self.predict_circle_center2(masked_circles['Blue'])
-    green_center, green_radius = self.predict_circle_center2(masked_circles['Green'])
-    red_center, red_radius = self.predict_circle_center2(masked_circles['Red'])
-    # Get the position of center of target sphere
-    target_center= self.detect_sphere_target2(self.cv_image2)
+    # Get Centers of each joint and end effector(red).
+    yellow_center, yellow_radius = self.predict_circle_center2("Yellow",masked_circles['Yellow'])
+    blue_center, blue_radius = self.predict_circle_center2("Blue",masked_circles['Blue'])
+    green_center, green_radius = self.predict_circle_center2("Green", masked_circles['Green'])
+    red_center, red_radius = self.predict_circle_center2("Red",masked_circles['Red'])
+    # When the joint or end effector can be detected from this camera, update  positions of our target
+    for color in self.circle_colorNames:
+      if self.is_circle_visible[color] and color == "Yellow":
+        self.update_circle_positions(color, yellow_center)
+
+      if self.is_circle_visible[color] and color == "Blue":
+        self.update_circle_positions(color, blue_center)
+
+      if self.is_circle_visible[color] and color == "Green":
+        self.update_circle_positions(color, green_center)
+
+      if self.is_circle_visible[color] and color == "Red":
+        self.update_circle_positions(color, red_center)
+
+
+    target_center = self.detect_sphere_target2(self.cv_image2)
     # When the target can be detected from this camera, update  positions of our target
     if self.is_target_visible:
       print("target visible")

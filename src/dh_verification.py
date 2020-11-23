@@ -130,7 +130,7 @@ if __name__ == "__main__":
     #print stuff either using print or pprint
     pprint(frame01[:,3])
     pprint(frame12[:,3])
-    pprint(frame03[:,3])
+    print(frame04[:,3])
 
     #testing
     M = frame04[:,3]

@@ -63,7 +63,7 @@ def set_frame01():
     # Type symbols and values you might need
     # frame01
     theta1 = symbols(" theta1 ")
-    theta1 = -pi / 2
+    theta1 = theta1 -pi / 2
     d1 = 2.5
     a1 = 0
     alpha1 = pi / 2
@@ -130,7 +130,7 @@ if __name__ == "__main__":
     #print stuff either using print or pprint
     pprint(frame01[:,3])
     pprint(frame12[:,3])
-    print(frame04[:,3])
+    pprint(frame04[:,3])
 
     #testing
     M = frame04[:,3]

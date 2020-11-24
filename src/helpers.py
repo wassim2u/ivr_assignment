@@ -142,8 +142,8 @@ def a_2_3(theta3):
   ])
   rot_x = Matrix([
     [1, 0, 0, 0],
-    [0, sp.cos(sp.pi/2), (-1)*sp.sin(sp.pi/2), 0],
-    [0, sp.sin(sp.pi/2), sp.cos(sp.pi/2), 0],
+    [0, sp.cos(-sp.pi/2), (-1)*sp.sin(-sp.pi/2), 0],
+    [0, sp.sin(-sp.pi/2), sp.cos(-sp.pi/2), 0],
     [0, 0, 0, 1]
   ])
   mtx_2_3 = rot_z*trans_x*rot_x
@@ -171,14 +171,15 @@ def fk_matrix(theta1, theta2, theta3, theta4):
   mtx_2_3 = a_2_3(theta3)
   mtx_3_4 = a_3_4(theta4)
   fk = mtx_0_1*mtx_1_2*mtx_2_3*mtx_3_4
-  return fk
+  return np.array(fk.col(3)).astype(np.float64)
 
 def fk_green(theta1, theta2, theta3):
   mtx_0_1 = a_0_1(theta1)
   mtx_1_2 = a_1_2(theta2)
   mtx_2_3 = a_2_3(theta3)
   fk = mtx_0_1*mtx_1_2*mtx_2_3
-  return fk.col(3)
+  np_fk = np.array(fk.col(3)).astype(np.float64)
+  return np_fk
 
 def get_joint2_3_angles(joint4):
 
@@ -201,13 +202,13 @@ def get_joint2_3_angles(joint4):
   if zz < 2.5:
     zz = 2.5
   """
-  x = (((-1)/3.5)*xx)
+  x = ((1/3.5)*xx)
   if x > 1:
     x = 1
   elif x < -1:
     x = -1
-  theta3 = np.arcsin(-x)
-  y = (1/(3.5*np.cos(theta3)))*yy
+  theta3 = np.arcsin(x)
+  y = (-1/(3.5*np.cos(theta3)))*yy
   if y > 1:
     y = 1
   elif y < -1:
@@ -232,31 +233,51 @@ def get_joint4_angles(theta2, theta3, end_effector):
   xx = end_effector[0]
   yy = end_effector[1]
   zz = end_effector[2]
+  
+  if not(theta3 == 0.0):
+    x = ((xx-3.5*np.sin(theta3))/(3*np.sin(theta3)))
+    if x > 1:
+      x = 1
+    elif x < -1:
+      x = -1
 
-  x = ((xx+3.5*np.sin(theta3))/(3*np.sin(theta3)))
-  print(x)
-  if x > 1:
-    x = 1
-  elif x < -1:
-    x = -1
+    return np.arccos(x)
 
-  theta4 = np.arccos(-x)
-  print(theta4)
-  return theta4
+  return 0.0
 
-b, c, d = symbols('b c d')
+a, b, c, d = symbols('a b c d')
 #print(fk_green(0.0, b, c))
-#print(fk_matrix(0.0, b, c, d).col(3))
-#print(fk_matrix(0.0, np.pi/2, 0.0, 0.0))
+#print(fk_matrix(a, b, c, d).col(3))
+#print(fk_green(0.0, b, c))
 
-print(fk_matrix(0.0, np.pi/2, 0.0, 0.0).col(3))
-print(fk_matrix(0.0, 0.0, np.pi/2, 0.0).col(3))
-print(fk_matrix(0.0, np.pi/2, np.pi/2, 0.0).col(3))
-[6.50000000000000], [-3.98010209722890e-16], [2.50000000000000]
-print(fk_matrix(0.0, -np.pi/2, 0.0, 0.0).col(3))
-print(fk_matrix(0.0, 0.0, -np.pi/2, 0.0).col(3))
-print(fk_matrix(0.0, -np.pi/2, -np.pi/2, 0.0).col(3))
-print(fk_matrix(0.0, 0.0, 0.0, np.pi/2).col(3))
 
-print(fk_matrix(np.pi/2, np.pi/2, np.pi/2, np.pi/2).col(3))
+print(fk_matrix(0.0, np.pi/2, 0.0, 0.0))
+print(fk_matrix(0.0, 0.0, np.pi/2, 0.0))
+print(fk_matrix(0.0, np.pi/2, np.pi/2, 0.0))
+print(fk_matrix(0.0, -np.pi/2, 0.0, 0.0))
+print(fk_matrix(0.0, 0.0, -np.pi/2, 0.0))
+print(fk_matrix(0.0, -np.pi/2, -np.pi/2, 0.0))
+print(fk_matrix(0.0, 0.0, 0.0, np.pi/2))
+print(fk_matrix(0.0, np.pi/2, np.pi/2, 1.0))
+"""
+#print(fk_matrix(0.0, b, c, d))
+#a1, a2 = get_joint2_3_angles(fk_matrix(0.0, 0.0, 0.0, 0.0))
+#b1, b2 = get_joint2_3_angles(fk_matrix(0.0, 1.0, 0.0, 0.0))
+print(fk_matrix(0.0, 0.0, 1.0, 1.0))
+c1, c2 = get_joint2_3_angles(fk_matrix(0.0, 0.0, 1.0, 1.0))
+c3 = get_joint4_angles(c1, c2, (fk_matrix(0.0, 0.0, 1.0, 1.0)))
+print(c3)
+#d1, d2 = get_joint2_3_angles(fk_matrix(0.0, -1.0, 0.0, -1.57))
+print("qq", fk_matrix(0.0, 1.0, 1.0, 0.79))
+e1, e2 = get_joint2_3_angles(fk_matrix(0.0, 1.0, 1.0, 0.79))
+e3 = get_joint4_angles(c1, c2, (fk_matrix(0.0, 1.0, 1.0, 0.79)))
+print(e3)
+print(fk_matrix(0.0, -1.57, 1.0, 1.23))
+f1, f2 = get_joint2_3_angles(fk_matrix(0.0, -1.57, 1.0, 1.23))
+f3 = get_joint4_angles(c1, c2, (fk_matrix(0.0, -1.57, 1.0, 1.23)))
+print(f3)
+#a3 = get_joint4_angles(a1, a2, fk_matrix(0.0, 0.0, 0.0, 0.0))
+#b3 = get_joint4_angles(a1, a2, fk_matrix(0.0, 1.0, 0.0, 0.0))
+#d3 = get_joint4_angles(c1, c2, (fk_matrix(0.0, -1.0, 0.0, -1.57)))
 
+"""

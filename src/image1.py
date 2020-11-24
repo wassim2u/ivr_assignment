@@ -306,7 +306,14 @@ class image_converter_1:
       self.update_box_positions(box_center)
 
 
+    # #####Testing
+    # point = [500,400]
+    # self.cv_image1[:,500] = [0,3,244]
+    # self.cv_image1[400,:] = [0,3,244]
+    # cv2.imshow("What is my life", self.cv_image1)
 
+
+    ######
 
 
     self.y_center = Float64MultiArray()
@@ -323,7 +330,6 @@ class image_converter_1:
     self.orange_box_center.data = box_center
 
 
-    ########
 
     # update to current time
     self.time = rospy.get_time()

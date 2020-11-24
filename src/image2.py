@@ -252,7 +252,6 @@ class image_converter_2:
       self.update_box_positions(box_center)
 
 
-
     self.y_center = Float64MultiArray()
     self.y_center.data = yellow_center
     self.b_center = Float64MultiArray()

@@ -58,6 +58,8 @@ class controller:
         # initialize a publisher to move the joint4
         self.joint4_pub = rospy.Publisher("/robot/joint4_position_controller/command", Float64, queue_size=10)
 
+        self.q = np.array([0,0,0,0])
+
         # synchronise incoming channels using the timestamps contained in their headers
         # slop defines the delay in seconds with which messages are synchronized
         ts = message_filters.ApproximateTimeSynchronizer([
@@ -73,13 +75,14 @@ class controller:
         self.prev_time = rospy.get_time()
         self.error = np.array([0.0, 0.0, 0.0], dtype='float64')
         self.error_d = np.array([0.0, 0.0, 0.0], dtype='float64')
-        self.Kp = np.array([[10, 0, 0], [0, 10, 0], [0, 0, 10]])
-        self.Kd = np.array([[0.1, 0, 0], [0, 0.1, 0], [0, 0, 0.1]])
+        self.Kp = np.array([[0.1, 0, 0], [0, 0.1, 0], [0, 0, 0.1]])
+        self.Kd = np.array([[0.4, 0, 0], [0, 0.4, 0], [0, 0, 0.4]])
 
         # task4_2
         self.previous_q = np.array([0.01, 0.01, 0.01, 0.01])
         self.previous_end_effector_position = np.array([0.0, 0.0, 0.0])
         self.previous_box_obstacle_position = np.array([0.0, 0.0, 0.0])
+
 
     def get_x(self, image_1_coordinates):
 
@@ -276,12 +279,21 @@ class controller:
         # estimate error
         self.error = pos_d - current_position
 
-        j_inv = np.linalg.pinv(self.get_jacobian(0.0, theta2, theta3, theta4))
 
+        j_inv = np.linalg.pinv(self.get_jacobian(0.0, theta2, theta3, theta4))
+        print(j_inv)
         # calculate angular velocity of the joints
         dq_d = np.dot(j_inv, (np.dot(self.Kd, self.error_d.transpose()) + np.dot(self.Kp, self.error.T)))
-
         q_d = q + (dt * dq_d)
+        #Our configuration space for theta2,theta3, and theta4 is between -pi/2 and pi/2
+        for i in range(1,4):
+            print(i)
+            angle = q_d[i]
+            if angle > np.pi/2:
+                q_d[i] = np.pi/2
+            if angle < -np.pi/2:
+                q_d[i] = -np.pi/2
+
         return q_d
 
     def get_trajectory_error(self, cv_image):
@@ -344,7 +356,6 @@ class controller:
         j_32 = diff(zz, b)
         j_33 = diff(zz, c)
         j_34 = diff(zz, d)
-        print(theta1)
 
         # Now make it a proper matrix substituting the actual angles
         jacobian = Matrix([
@@ -608,6 +619,7 @@ class controller:
 
         # Find the new joint angles using the q_dot we found
         new_q = old_q + dt * q_dot
+
         return new_q
 
     ###Functions to move joints 2-4 ###
@@ -647,7 +659,11 @@ class controller:
         #                      )
         # print("NEW Q: ")
         # print(new_q)
-        new_q = self.closed_loop_control(0.0,0,0,0,self.target_3d)
+        # target =(self.yellow_3d-[400,400,500])* 0.0389
+        new_q = self.closed_loop_control(self.q[0],self.q[1],self.q[2],self.q[3],self.target_3d)
+        self.q = new_q
+        print(new_q)
+
 
         # ---------For publishing-------#
         ###task2_2
@@ -671,15 +687,15 @@ class controller:
             # Task 3_1
             self.end_effector_FK_pub.publish(end_effector_FK)
             self.end_effector_vision_pub.publish(end_effector_vision)
-            #Task 4_2
+            #Task 3_2
             self.joint1_pub.publish(new_q[0])
             self.joint2_pub.publish(new_q[1])
             self.joint3_pub.publish(new_q[2])
             self.joint4_pub.publish(new_q[3])
-
-
-
-
+            #
+            #
+            #
+            #
 
         except CvBridgeError as e:
             print(e)

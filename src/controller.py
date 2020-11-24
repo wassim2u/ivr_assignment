@@ -67,6 +67,7 @@ class controller:
         self.joint4_pub = rospy.Publisher("/robot/joint4_position_controller/command", Float64, queue_size=10)
 
         self.q = np.array([0,0,0,0])
+        self.rate = rospy.Rate(20)
 
         # synchronise incoming channels using the timestamps contained in their headers
         # slop defines the delay in seconds with which messages are synchronized
@@ -90,84 +91,6 @@ class controller:
         self.previous_q = np.array([0.01, 0.01, 0.01, 0.01])
         self.previous_end_effector_position = np.array([0.0, 0.0, 0.0])
         self.previous_box_obstacle_position = np.array([0.0, 0.0, 0.0])
-
-
-    def get_x(self, image_1_coordinates):
-
-        self.x_blue = image_1_coordinates[1].data[0]
-        self.x_yellow = image_1_coordinates[0].data[0]
-
-        self.x_green = 0.0
-        self.x_red = 0.0
-        
-        self.x_green == image_1_coordinates[2].data[0]
-
-        
-        self.x_red == image_1_coordinates[1].data[0]
-
-        # print(self.x_yellow, self.x_blue, self.x_green, self.x_red)
-
-    def get_y(self, image_2_coordinates):
-
-        self.y_blue = image_2_coordinates[1].data[0]
-        self.y_yellow = image_2_coordinates[0].data[0]
-
-        self.y_green = 0.0
-        self.y_red = 0.0
-
-        self.y_green == image_2_coordinates[2].data[0]
-
-        self.y_red == image_2_coordinates[1].data[0]
-        #print(self.y_yellow, self.y_blue, self.y_green, self.y_red)
-
-    def get_z(self, image_1_coordinates, image_2_coordinates):
-        # Regard z-value of blue joint as "baseline" for green joint and z-value of yellow
-        # joint as "baseline" for red joint
-        # i.e. the z-value of the green and red joint cannot be lower than
-        # z_blue-error margin or z_yellow-error_margin, respectively
-        # Take average of the two readings to find z-value for blue joint
-        self.z_blue = (image_1_coordinates[1].data[1] + image_2_coordinates[1].data[1]) / 2
-        self.z_yellow = (image_1_coordinates[0].data[1] + image_2_coordinates[0].data[1]) / 2
-
-        g1_z = 0.0
-        g2_z = 0.0
-        r1_z = 0.0
-        r2_z = 0.0
-
-        # if the green joint is obstructed, get the z-value from other camera for green joint and
-        # use x or y value from obstructing joint
-        """
-        if (image_1_coordinates[2].data[1] == 1234.0):
-            g1_z = image_2_coordinates[2].data[1]
-            g2_z = image_2_coordinates[2].data[1]
-        elif (image_2_coordinates[2].data[1] == 0.0):
-            g2_z = image_1_coordinates[2].data[1]
-            g1_z = image_1_coordinates[2].data[1]
-
-        if (image_1_coordinates[3].data[1] == 0.0):
-            r1_z = image_2_coordinates[3].data[1]
-            r2_z = image_2_coordinates[3].data[1]
-        elif (image_2_coordinates[3].data[1] == 0.0):
-            r2_z = image_1_coordinates[3].data[1]
-            r1_z = image_1_coordinates[3].data[1]
-        """
-        #if z_green or z_red is below z_blue in both pictures, set their z-value to that
-        #of z_blue
-        #First, check green
-        if (g1_z > self.z_blue+self.error_margin and g2_z > self.z_blue+self.error_margin):
-            self.z_green = self.z_blue
-        else:
-            self.z_green = (g1_z + g2_z) / 2
-
-        # then check red
-        if (r1_z > self.z_yellow + self.error_margin and r2_z > self.z_yellow + self.error_margin):
-            self.z_red = self.z_blue
-        else:
-            self.z_red = (r1_z + r2_z) / 2
-
-        print(self.z_yellow, self.z_blue, self.z_green, self.z_red)
-
-        # Note: Image 2 - xz plane; Image 1 - yz plane
 
     def create_new_3d_coordinates_from_data(self, y1, b1, g1, r1, y2, b2, g2, r2, target1, target2, box1, box2):
         self.yellow_center1 = (np.asarray(y1.data))
@@ -247,14 +170,22 @@ class controller:
 
     def closed_loop_control(self, theta1, theta2, theta3, theta4, target):
         q =  np.array([theta1,theta2,theta3,theta4])
+<<<<<<< HEAD
+=======
+        #Get change in time
+>>>>>>> e0b61550bca5d57179051975cb45b3b2db40189e
         current_time = rospy.get_time()
         dt = current_time - self.prev_time
         self.prev_time = current_time
 
         fk = fk_matrix(0.0, theta2, theta3, theta4)
         current_position = fk.col(3)[0:3]
+<<<<<<< HEAD
         print(current_position)
+=======
+>>>>>>> e0b61550bca5d57179051975cb45b3b2db40189e
         pos_d = target
+
 
         # estimate derivative of error
         self.error_d = ((pos_d - current_position) - self.error) / dt
@@ -279,15 +210,43 @@ class controller:
 
         return q_d
 
+<<<<<<< HEAD
       
+=======
+
+
+    def forward_kinematics(self, a, b, c, d):
+        xx = (-7 * sp.cos(a + b + c) + 7 * sp.cos(a - b + c) - 7 * sp.cos(a + b - c) + 7 * sp.cos(
+            a - b - c) - 6 * sp.cos(a + b + d) - 6 * sp.cos(a - b + d) - 3 * sp.cos(a + b + c + d) + 3 * sp.cos(
+            a - b + c + d) - 3 * sp.cos(a + b - c + d) + 3 * sp.cos(a - b - c + d) + 6 * sp.cos(a + b - d) + 6 * sp.cos(
+            a - b - d) - 3 * sp.cos(a + b + c - d) + 3 * sp.cos(a - b + c - d) - 3 * sp.cos(a + b - c - d) + 3 * sp.cos(
+            a - b - c - d) + 14 * sp.sin(a + c) - 14 * sp.sin(a - c) + 6 * sp.sin(a + c + d) - 6 * sp.sin(
+            a - c + d) + 6 * sp.sin(a + c - d) - 6 * sp.sin(a - c - d)) / 8
+        yy = (-14 * sp.cos(a + c) + 14 * sp.cos(a - c) - 6 * sp.cos(a + c + d) + 6 * sp.cos(a - c + d) - 6 * sp.cos(
+            a + c - d) + 6 * sp.cos(a - c - d) - 7 * sp.sin(a + b + c) + 7 * sp.sin(a - b + c) - 7 * sp.sin(
+            a + b - c) + 7 * sp.sin(a - b - c) - 6 * sp.sin(a + b + d) - 6 * sp.sin(a - b + d) - 3 * sp.sin(
+            a + b + c + d) + 3 * sp.sin(a - b + c + d) - 3 * sp.sin(a + b - c + d) + 3 * sp.sin(
+            a - b - c + d) + 6 * sp.sin(a + b - d) + 6 * sp.sin(a - b - d) - 3 * sp.sin(a + b + c - d) + 3 * sp.sin(
+            a - b + c - d) - 3 * sp.sin(a + b - c - d) + 3 * sp.sin(a - b - c - d)) / 8
+        zz = (7 * sp.cos(b + c) + 7 * sp.cos(b - c) + 6 * sp.cos(b + d) + 3 * sp.cos(b + c + d) + 3 * sp.cos(
+            b - c + d) - 6 * sp.cos(b - d) + 3 * sp.cos(b + c - d) + 3 * sp.cos(b - c - d) + 10) / 4
+        return [xx, yy, zz]
+
+>>>>>>> e0b61550bca5d57179051975cb45b3b2db40189e
 
     def get_jacobian(self, theta1, theta2, theta3, theta4):
         a, b, c, d = symbols('a b c d')
 
         fk = fk_matrix(a,b,c,d)
+<<<<<<< HEAD
         xx = fk.col(3).row(0) 
         yy = fk.col(3).row(1)
         zz = fk.col(3).row(2)
+=======
+        xx = fk.row(0).col(3)
+        yy = fk.row(1).col(3)
+        zz = fk.row(2).col(3)
+>>>>>>> e0b61550bca5d57179051975cb45b3b2db40189e
 
         # Using sympy diff, we can now compute the jacobian matrix:
         # Row 1
@@ -377,84 +336,6 @@ class controller:
         q_dot = q_dot.subs(c, theta3)
 
         print(q_dot)
-
-    def last_attempt(self, bg):
-        a, b = symbols('a b')
-        rot_x = Matrix([[sp.cos(a), -sp.sin(a), 0, 0], [sp.sin(a), sp.cos(a), 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
-        rot_y = Matrix([[sp.sin(b), -sp.cos(b), 0, 0], [sp.cos(b), sp.sin(b), 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
-        arr = Matrix([[0.0], [0.0], [1.0], [1.0]])
-
-        transform = rot_x * rot_y * arr
-
-        x = Eq(sp.asin(a) * sp.asin(b), bg[0, 0])
-        y = Eq(-sp.acos(a) * sp.asin(b), bg[1, 0])
-        z = Eq(sp.acos(b), bg[2, 0])
-
-        print(sp.solve((x, y, z), (b)))
-
-    def rotation_matrix_from_vectors(self, vec1, vec2):
-        """ Find the rotation matrix that aligns vec1 to vec2
-        :param vec1: A 3d "source" vector
-        :param vec2: A 3d "destination" vector
-        :return mat: A transform matrix (3x3) which when applied to vec1, aligns it with vec2.
-        """
-        a, b = (vec1 / np.linalg.norm(vec1)).reshape(3), (vec2 / np.linalg.norm(vec2)).reshape(3)
-        v = np.cross(a, b)
-        c = np.dot(a, b)
-        s = np.linalg.norm(v)
-        kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
-        rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
-        a = np.arctan2(rotation_matrix[2, 1], rotation_matrix[2, 2])
-        b = np.arctan2(-rotation_matrix[2, 0], np.sqrt((rotation_matrix[2, 1] ** 2) + rotation_matrix[2, 2] ** 2))
-        c = np.arctan2(rotation_matrix[1, 0], rotation_matrix[0, 0])
-        print(a, b, c)
-        return rotation_matrix
-
-    def task_2_1(self):
-        # First we need the forwards kinematics equations, giving the thetas as variables
-        a = 0.0
-        b, c, d = symbols('b c d')
-
-        x_rot = Matrix([[sp.cos(b), -sp.sin(b), 0, 0], [sp.sin(b), sp.cos(b), 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
-        y_rot = Matrix([[sp.cos(c), -sp.sin(c), 0, 0], [sp.sin(c), sp.cos(c), 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
-        init = Matrix([[0.0], [0.0], [1.0], [1.0]])
-        diff_1_3_y = self.blue_3d[1] - self.green_3d[1]
-        diff_1_3_x = self.blue_3d[0] - self.green_3d[0]
-        diff_1_3_z = self.blue_3d[2] - self.green_3d[2]
-        diff_1_3_x = self.blue_3d[0] - self.green_3d[0]
-        diff_1_3_y = self.blue_3d[1] - self.green_3d[1]
-        diff_1_3_z = self.blue_3d[2] - self.green_3d[2]
-        v = Matrix([[diff_1_3_x], [diff_1_3_y], [diff_1_3_z], [1]])
-        transform = (x_rot * y_rot * v)
-        print(transform)
-
-        # Get the frame transformations
-        a01 = a_0_1(a)
-
-        # We do not need to compute a, since joint 1 is fixed and hence we will always have a=0.0
-        # To compute the angle of joint 2, we need the coordinates of the center of joint 2 and joint 4 and subtract them
-
-        # v = Matrix([[diff_1_3_x], [diff_1_3_y], [diff_1_3_z], [1]])
-        # print(a01.shape)
-        # mtx = (a01.inv())*v
-        # m = sp.atan(mtx[1,0]/mtx[0,0])
-        # a02 = a_1_2(m)*a01
-        # mtx2 = a02.inv()*v
-        # m2 = sp.atan(mtx2[2,0]/mtx2[1,0])
-        # a03 = (a_2_3(m2)*a02)
-        # theta2 = np.arctan2(mtx.row(1).col(0), mtx.row(2).col(0))
-        # transform = mtx.inv()*v
-        # mtx3 = a03.inv()*mtx2
-        # m3 = sp.atan(mtx3[1,0]/mtx3[0,0])
-        # a03 = a_3_4(m3)*a03
-        # mtx4 = a03.inv()*mtx3
-        # m3 = np.arctan2(mtx4[2,0], mtx[1,0])
-
-        # theta3 = np.arctan2(transform.row(1), transform.row(2))
-        # print(m, m2)
-
-        # a03 = a_2_3(c)*a02
-        # a04 = a_3_4(d)*a03
 
     """
     #Generates angles for the robot in accordance with task 3.1
@@ -593,16 +474,27 @@ class controller:
         self.image_1_coordinates = np.array([y1, b1, g1, r1])
         self.image_2_coordinates = np.array([y2, b2, g2, r2])
 
+<<<<<<< HEAD
         self.joint2_angle = Float64()
         self.joint3_angle = Float64()
         self.joint4_angle = Float64()
         self.joint2_angle,self.joint3_angle,self.joint4_angle = self.compute_joint_angles()
 
         actual_coordinate = fk_green(0.0, self.joint2_angle, self.joint3_angle)
+=======
+        # self.get_z(self.image_1_coordinates, self.image_2_coordinates)
+        # self.get_x(self.image_2_coordinates)
+        # self.get_y(self.image_1_coordinates)
+        # print(self.x_red, self.y_red, self.z_red)
+
+
+        # actual_coordinate = fk_green(0.0, self.joint2_angle, self.joint3_angle)
+>>>>>>> e0b61550bca5d57179051975cb45b3b2db40189e
         
         # Get coordinates from the two images and change the values to make them with respect to yellow center in meters
         self.create_new_3d_coordinates_from_data(y1, b1, g1, r1, y2, b2, g2, r2, target1, target2, box1, box2)
         self.changeAxis()
+<<<<<<< HEAD
 
         self.compute_joint_angles()
         blue_joint = np.array([[self.blue_3d[0]], [self.blue_3d[1]], [self.blue_3d[2]]])
@@ -615,8 +507,10 @@ class controller:
         theta4 = get_joint4_angles(theta2, theta3, blue_joint, green_joint, red_joint)
     
         #####Task 3_2 + 4_2 ### 
+=======
+>>>>>>> e0b61550bca5d57179051975cb45b3b2db40189e
 
-        # new_q = self.task4_2(theta1=0.0, theta2=0.0, theta3=0.0, theta4=0.0,
+        # new_q = self.task4_2(theta1=self.q[0], theta2=self.q[1], theta3=self.q[2], theta4=self.q[3],
         #                      end_effector=self.red_3d,
         #                      target=self.target_3d,
         #                      box_obstacle=self.box_3d
@@ -636,12 +530,32 @@ class controller:
         ###task3_1
 
         a, b, c = self.compute_joint_angles()
+<<<<<<< HEAD
         #end_effector_FK = Float64MultiArray()
         #end_effector_FK.data = fk_matrix(0, a, b, c)
         #end_effector_vision = Float64MultiArray()
         #end_effector_vision.data = self.red_3d
+=======
+        end_effector_FK = Float64MultiArray()
+        fk = fk_matrix(0.0, a, b, c)
+        end_effector_FK.data =  fk.col(3)[0:3]
+        print( "FK NEW"+ str(fk.col(3)[0:3]))
+        end_effector_vision = Float64MultiArray()
+        end_effector_vision.data = self.red_3d
+>>>>>>> e0b61550bca5d57179051975cb45b3b2db40189e
+
+
+        ### Task 2 ###
+        # self.compute_joint_angles()
+        # green_joint = np.array([[self.green_3d[0]], [self.green_3d[1]], [self.green_3d[2]]])
+        # red_joint = np.array([[self.red_3d[0]], [self.red_3d[1]], self.red_3d[2]])
+        # print("Joint 4 error: ")
+        # #theta2, theta3, theta4, target = self.trajectory()
+        # theta2, theta3 = get_joint2_3_angles(green_joint)
+        # theta4 = get_joint4_angles(theta2, theta3, red_joint)
 
         try:
+<<<<<<< HEAD
             self.joint2_t2.publish(theta2)
             self.joint3_t3.publish(theta3)
             self.joint4_t4.publish(theta4)
@@ -670,6 +584,36 @@ class controller:
             #
             #
 
+=======
+            # publish new joint angles
+            # self.joint2_pub.publish(joint2)
+            # self.joint3_pub.publish(joint3)
+            # self.joint4_pub.publish(joint4)
+            # Task 2_2
+            self.target_3d_pub.publish(target)
+            # Task 3_1
+            self.end_effector_FK_pub.publish(end_effector_FK)
+            self.end_effector_vision_pub.publish(end_effector_vision)
+            #Task 3_2
+            # self.joint1_pub.publish(new_q[0])
+            # self.joint2_pub.publish(new_q[1])
+            # self.joint3_pub.publish(new_q[2])
+            # self.joint4_pub.publish(new_q[3])
+
+            ### Task 2 ###
+            # self.joint2_t2.publish(theta2)
+            # self.joint3_t3.publish(theta3)
+            # self.joint4_t4.publish(theta4)
+            # self.green_joint3dx.publish(self.green_3d[0])
+            # self.green_joint3dy.publish(self.green_3d[1])
+            # self.green_joint3dz.publish(self.green_3d[2])
+            # self.green_joint3dax.publish(actual_coordinate[0])
+            # self.green_joint3day.publish(actual_coordinate[1])
+            # self.green_joint3daz.publish(actual_coordinate[2])
+            # self.joint2_pub.publish(self.joint2_angle)
+            # self.joint3_pub.publish(self.joint3_angle)
+            # self.joint4_pub.publish(self.joint4_angle)
+>>>>>>> e0b61550bca5d57179051975cb45b3b2db40189e
         except CvBridgeError as e:
             print(e)
 

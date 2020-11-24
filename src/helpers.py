@@ -186,7 +186,7 @@ def get_joint2_3_angles(joint4):
   xx = joint4[0]
   yy = joint4[1]
   zz = joint4[2]
-  """
+  
   if xx > 3.5:
     xx = 3.5
   elif xx < -3.5:
@@ -201,14 +201,15 @@ def get_joint2_3_angles(joint4):
     zz = 6.0
   if zz < 2.5:
     zz = 2.5
-  """
+
   x = (xx/3.5)
   if x > 1:
     x = 1
   elif x < -1:
     x = -1
   theta3 = np.arcsin(x)
-  y = (-1/(3.5*np.cos(theta3)))*yy
+  print(theta2)
+  y = (1/(-3.5*np.cos(theta3)))*yy
   if y > 1:
     y = 1
   elif y < -1:

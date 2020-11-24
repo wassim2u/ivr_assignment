@@ -605,12 +605,14 @@ class controller:
         self.changeAxis()
 
         self.compute_joint_angles()
+        blue_joint = np.array([[self.blue_3d[0]], [self.blue_3d[1]], [self.blue_3d[2]]])
         green_joint = np.array([[self.green_3d[0]], [self.green_3d[1]], [self.green_3d[2]]])
-        red_joint = np.array([[self.red_3d[0]], [self.red_3d[1]], self.red_3d[2]])
+        red_joint = np.array([[self.red_3d[0]], [self.red_3d[1]], [self.red_3d[2]]])
         print("Joint 4 error: ")
         #theta2, theta3, theta4, target = self.trajectory()
+        print(blue_joint.shape, green_joint.shape, red_joint.shape)
         theta2, theta3 = get_joint2_3_angles(green_joint)
-        theta4 = get_joint4_angles(theta2, theta3, red_joint)
+        theta4 = get_joint4_angles(theta2, theta3, blue_joint, green_joint, red_joint)
     
         #####Task 3_2 + 4_2 ### 
 
@@ -622,9 +624,9 @@ class controller:
         # print("NEW Q: ")
         # print(new_q)
         # target =(self.yellow_3d-[400,400,500])* 0.0389
-        new_q = self.closed_loop_control(self.q[0],self.q[1],self.q[2],self.q[3],self.target_3d)
-        self.q = new_q
-        print(new_q)
+        #new_q = self.closed_loop_control(self.q[0],self.q[1],self.q[2],self.q[3],self.target_3d)
+        #self.q = new_q
+        #print(new_q)
 
 
         # ---------For publishing-------#
@@ -649,9 +651,9 @@ class controller:
             self.green_joint3dax.publish(actual_coordinate[0])
             self.green_joint3day.publish(actual_coordinate[1])
             self.green_joint3daz.publish(actual_coordinate[2])
-            #self.joint2_pub.publish(self.joint2_angle)
-            #self.joint3_pub.publish(self.joint3_angle)
-            #self.joint4_pub.publish(self.joint4_angle)
+            self.joint2_pub.publish(self.joint2_angle)
+            self.joint3_pub.publish(self.joint3_angle)
+            self.joint4_pub.publish(self.joint4_angle)
 
             # Task 2_2
             self.target_3d_pub.publish(target)
@@ -659,10 +661,10 @@ class controller:
             #self.end_effector_FK_pub.publish(end_effector_FK)
             #self.end_effector_vision_pub.publish(end_effector_vision)
             #Task 3_2
-            self.joint1_pub.publish(new_q[0])
-            self.joint2_pub.publish(new_q[1])
-            self.joint3_pub.publish(new_q[2])
-            self.joint4_pub.publish(new_q[3])
+            #self.joint1_pub.publish(new_q[0])
+            #self.joint2_pub.publish(new_q[1])
+            #self.joint3_pub.publish(new_q[2])
+            #self.joint4_pub.publish(new_q[3])
             #
             #
             #

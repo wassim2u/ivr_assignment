@@ -40,11 +40,6 @@ class controller:
         self.target_sub2 = message_filters.Subscriber("/image2/target_center", Float64MultiArray)
         self.box_sub2 = message_filters.Subscriber("/image2/box_center", Float64MultiArray)
 
-        self.yz = rospy.Publisher("/robot/yellow_z", Float64, queue_size=10)
-        self.bz = rospy.Publisher("/robot/blue_z", Float64, queue_size=10)
-        self.gz = rospy.Publisher("/robot/green_z", Float64, queue_size=10)
-        self.rz = rospy.Publisher("/robot/red_z", Float64, queue_size=10)
-
         self.target_3d_pub = rospy.Publisher("task2_2/target_3d", Float64MultiArray, queue_size=10)
         self.end_effector_FK_pub = rospy.Publisher("task3_1/end_effector_position/FK", Float64MultiArray, queue_size=10)
         self.end_effector_vision_pub = rospy.Publisher("task3_1/end_effector_position/vision", Float64MultiArray,
@@ -651,7 +646,7 @@ class controller:
         self.create_new_3d_coordinates_from_data(y1, b1, g1, r1, y2, b2, g2, r2, target1, target2, box1, box2)
         self.changeAxis()
 
-        # new_q = self.task4_2(theta1=0.0, theta2=0.0, theta3=0.0, theta4=0.0,
+        # new_q = self.task4_2(theta1=self.q[0], theta2=self.q[1], theta3=self.q[2], theta4=self.q[3],
         #                      end_effector=self.red_3d,
         #                      target=self.target_3d,
         #                      box_obstacle=self.box_3d

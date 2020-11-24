@@ -588,8 +588,7 @@ class controller:
         print("Oldq "+ str(old_q))
         # Define Kp, Kd, and constant k (which is used for secondary task)
         constant_k = 1  # Should be positive constant
-        Kp = np.array([[5, 0, 0], [0, 5, 0], [0, 0, 5]])
-        Kd = np.array([[0.1, 0, 0], [0, 0.1, 0], [0, 0, 0.1]])
+
 
         # Get the change in time
         dt = self.calculate_delta_t()
@@ -613,7 +612,7 @@ class controller:
         null_space_projection = (identity_matrix - pseudo_jacobian.dot(jacobian)).dot(secondary_task)
 
         # qdot is joint velocity/joint angles derivative, calculate it using the null_space_projection
-        q_dot = pseudo_jacobian.dot((Kp.dot(error.transpose()) + Kd.dot(error_derivative.transpose()))) \
+        q_dot = pseudo_jacobian.dot((self.Kp.dot(error.transpose()) + self.Kd.dot(error_derivative.transpose()))) \
                 + \
                 null_space_projection
 

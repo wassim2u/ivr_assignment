@@ -48,6 +48,14 @@ class controller:
         #initialize a publisher for joint angle
         self.joint2_t2 = rospy.Publisher("/robot/theta2", Float64, queue_size=10)
         self.joint3_t3 = rospy.Publisher("/robot/theta3", Float64, queue_size=10)
+        self.joint4_t4 = rospy.Publisher("/robot/theta4", Float64, queue_size=10)
+        self.green_joint3dx = rospy.Publisher("/robot/greenx", Float64, queue_size=10)
+        self.green_joint3dy = rospy.Publisher("/robot/greeny", Float64, queue_size=10)
+        self.green_joint3dz = rospy.Publisher("/robot/greenz", Float64, queue_size=10)
+        self.green_joint3dax = rospy.Publisher("/robot/greenax", Float64, queue_size=10)
+        self.green_joint3day = rospy.Publisher("/robot/greenay", Float64, queue_size=10)
+        self.green_joint3daz = rospy.Publisher("/robot/greenaz", Float64, queue_size=10)
+
 
         self.target_3d_pub = rospy.Publisher("task2_2/target_3d", Float64MultiArray, queue_size=10)
         self.end_effector_FK_pub = rospy.Publisher("task3_1/end_effector_position/FK", Float64MultiArray, queue_size=10)
@@ -311,25 +319,6 @@ class controller:
     def get_direction(self, joint1, joint2):
         return joint2-joint1
 
-
-    def task_2_1(self):
-        #First we need the forwards kinematics equations, giving the thetas as variables
-        a = 0.0
-        b, c, d = symbols('b c d')
-
-        #theta1, theta2, theta3, theta4 = 0
-
-        #Construct theyz plane
-        yz_plane = Matrix([[1,0,0]])
-        xz_plane = Matrix([[0,1,0]])
-        xy_plane = Matrix([[0,0,1]])
-
-        joint1 = Matrix([[self.blue_3d[0]], [self.green_3d[1]], [self.green_3d[2]]])
-        
-        
-
-
-
     """
     #Generates angles for the robot in accordance with task 3.1
     def task_3_1(self):
@@ -401,18 +390,30 @@ class controller:
         self.joint3_angle = Float64()
         self.joint4_angle = Float64()
         self.joint2_angle,self.joint3_angle,self.joint4_angle = self.compute_joint_angles()
+
+        actual_coordinate = fk_green(0.0, self.joint2_angle, self.joint3_angle)
         
         # Get coordinates from the two images and change the values to make them with respect to yellow center in meters
         self.create_new_3d_coordinates_from_data(y1, b1, g1, r1, y2, b2, g2, r2,target1, target2)
         self.changeAxis()
 
         self.compute_joint_angles()
-        joint2 = np.array([[self.green_3d[0]], [self.green_3d[1]], [self.green_3d[2]]])
+        green_joint = np.array([[self.green_3d[0]], [self.green_3d[1]], [self.green_3d[2]]])
+        red_joint = np.array([[self.red_3d[0]], [self.red_3d[1]], self.red_3d[2]])
+        print("Joint 4 error: ")
         #theta2, theta3, theta4, target = self.trajectory()
-        theta2, theta3 = get_joint2_3_angles(joint2)
+        theta2, theta3 = get_joint2_3_angles(green_joint)
+        theta4 = get_joint4_angles(theta2, theta3, red_joint)
         try:
             self.joint2_t2.publish(theta2)
             self.joint3_t3.publish(theta3)
+            self.joint4_t4.publish(theta4)
+            self.green_joint3dx.publish(self.green_3d[0])
+            self.green_joint3dy.publish(self.green_3d[1])
+            self.green_joint3dz.publish(self.green_3d[2])
+            self.green_joint3dax.publish(actual_coordinate[0])
+            self.green_joint3day.publish(actual_coordinate[1])
+            self.green_joint3daz.publish(actual_coordinate[2])
             self.joint2_pub.publish(self.joint2_angle)
             self.joint3_pub.publish(self.joint3_angle)
             self.joint4_pub.publish(self.joint4_angle)

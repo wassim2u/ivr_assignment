@@ -194,7 +194,7 @@ class image_converter_2:
     color = [255, 23, 0]
     line_thickness = 2
     cv2.circle(new_img, (int(center[0]), int(center[1])), int(radius), color, line_thickness)
-    cv2.imshow('Image with predicted shape of circle', new_img)
+    #cv2.imshow('Image with predicted shape of circle', new_img)
     # cv2.waitKey(1)
 
     # Draws a rectangle on the image. Call when needed for visualisation and to check result
@@ -217,7 +217,7 @@ class image_converter_2:
 
     # Uncomment if you want to save the image
     #cv2.imwrite('image_copy.png', cv_image)
-    im2=cv2.imshow('window2', self.cv_image2)
+    #im2=cv2.imshow('window2', self.cv_image2)
     cv2.waitKey(1)
 
     ##Task 2##
@@ -292,5 +292,3 @@ def main(args):
 # run the code if the node is called
 if __name__ == '__main__':
     main(sys.argv)
-
-

@@ -8,11 +8,13 @@ import numpy as np
 import tensorflow as tf
 import os
 import sympy as sp
-from sympy import symbols, diff, sin, cos, Matrix
+from sympy import symbols, diff, sin, cos, Matrix, Eq, solveset, Interval
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from std_msgs.msg import Float64MultiArray, Float64
 from cv_bridge import CvBridge, CvBridgeError
+
+#domain = Interval([-sp.pi-0.1, sp.pi+0.1])
 
 
 def get_end_effector(cv_image):
@@ -88,8 +90,8 @@ def change_frame(y, z, center_y, center_z):
 ##These functions define the frame transformations for forward kinematics##
 def a_0_1(theta1):
   rot_z = Matrix([
-    [sp.cos(theta1-(sp.pi/2)), (-1.0)*sp.sin(theta1-(sp.pi/2)), 0, 0],
-    [sp.sin(theta1-(sp.pi/2)), sp.cos(theta1-(sp.pi/2)), 0, 0],
+    [sp.cos(theta1+(sp.pi/2)), (-1.0)*sp.sin(theta1+(sp.pi/2)), 0, 0],
+    [sp.sin(theta1+(sp.pi/2)), sp.cos(theta1+(sp.pi/2)), 0, 0],
     [0, 0, 1, 0],
     [0, 0, 0, 1]
   ])
@@ -176,6 +178,85 @@ def fk_green(theta1, theta2, theta3):
   mtx_1_2 = a_1_2(theta2)
   mtx_2_3 = a_2_3(theta3)
   fk = mtx_0_1*mtx_1_2*mtx_2_3
-  return fk
+  return fk.col(3)
 
+def get_joint2_3_angles(joint4):
+
+  xx = joint4[0]
+  yy = joint4[1]
+  zz = joint4[2]
+  """
+  if xx > 3.5:
+    xx = 3.5
+  elif xx < -3.5:
+    xx = -3.5
+
+  if yy > 3.5:
+    yy = 3.5
+  elif yy < -3.5:
+    yy = -3.5
+
+  if zz > 6.0:
+    zz = 6.0
+  if zz < 2.5:
+    zz = 2.5
+  """
+  x = (((-1)/3.5)*xx)
+  if x > 1:
+    x = 1
+  elif x < -1:
+    x = -1
+  theta3 = np.arcsin(-x)
+  y = (1/(3.5*np.cos(theta3)))*yy
+  if y > 1:
+    y = 1
+  elif y < -1:
+    y = -1
+
+  z = ((zz-2.5)/(3.5*np.cos(theta3)))
+  if z > 1:
+    z = 1
+  elif z < -1:
+    z = -1
+
+  theta2 = np.arcsin(y)
+
+
+  #theta2 += np.arccos(z)
+  #theta2 /= 2.0
+  #Use the forwards kinematics equation to derive a system of equations where the angles are the variables
+
+  return theta2, theta3
+
+def get_joint4_angles(theta2, theta3, end_effector):
+  xx = end_effector[0]
+  yy = end_effector[1]
+  zz = end_effector[2]
+
+  x = ((xx+3.5*np.sin(theta3))/(3*np.sin(theta3)))
+  print(x)
+  if x > 1:
+    x = 1
+  elif x < -1:
+    x = -1
+
+  theta4 = np.arccos(-x)
+  print(theta4)
+  return theta4
+
+b, c, d = symbols('b c d')
+#print(fk_green(0.0, b, c))
+#print(fk_matrix(0.0, b, c, d).col(3))
+#print(fk_matrix(0.0, np.pi/2, 0.0, 0.0))
+
+print(fk_matrix(0.0, np.pi/2, 0.0, 0.0).col(3))
+print(fk_matrix(0.0, 0.0, np.pi/2, 0.0).col(3))
+print(fk_matrix(0.0, np.pi/2, np.pi/2, 0.0).col(3))
+[6.50000000000000], [-3.98010209722890e-16], [2.50000000000000]
+print(fk_matrix(0.0, -np.pi/2, 0.0, 0.0).col(3))
+print(fk_matrix(0.0, 0.0, -np.pi/2, 0.0).col(3))
+print(fk_matrix(0.0, -np.pi/2, -np.pi/2, 0.0).col(3))
+print(fk_matrix(0.0, 0.0, 0.0, np.pi/2).col(3))
+
+print(fk_matrix(np.pi/2, np.pi/2, np.pi/2, np.pi/2).col(3))
 

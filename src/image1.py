@@ -49,6 +49,7 @@ class image_converter_1:
     self.is_circle_visible = {"Yellow":True, "Blue":True, "Green":True, "Red":True}
 
 
+
     # These variables are used to keep track of target to be used when approximating the next position of
     # target when it is not visible
     self.is_target_visible = True
@@ -69,13 +70,13 @@ class image_converter_1:
 
     ###Functions to move joints 2-4 ###
   def move_joint2(self, t):
-    return (np.pi/2)*np.sin((np.pi/15.0)*t)
+    return (np.pi/3)*np.sin((np.pi/15.0)*t)
 
   def move_joint3(self, t):
-    return (np.pi/2)*np.sin((np.pi/18.0)*t)
+    return (np.pi/3)*np.sin((np.pi/18.0)*t)
 
   def move_joint4(self, t):
-    return (np.pi/2)*np.sin((np.pi/20.0)*t)
+    return (np.pi/3)*np.sin((np.pi/20.0)*t)
 
   def compute_joint_angles(self):
       time = rospy.get_time()
@@ -220,7 +221,7 @@ class image_converter_1:
     contours, hierarchy = cv2.findContours(mask, 1, 2)
     # Draw the outline on the binary image
     cv2.drawContours(img, contours, -1, (0, 255, 0), 1)
-    cv2.imshow('draw contours', img)
+    #cv2.imshow('draw contours', img)
     cv2.waitKey(1)
 
   # Draws a circle on the image. Call when needed for visualisation and to check result.
@@ -229,7 +230,7 @@ class image_converter_1:
     color = [255, 23, 0]
     line_thickness = 2
     cv2.circle(new_img, (int(center[0]), int(center[1])), int(radius), color, line_thickness)
-    cv2.imshow('Image with predicted shape of circle', new_img)
+    #cv2.imshow('Image with predicted shape of circle', new_img)
     # cv2.waitKey(1)
 
   # Draws a rectangle on the image. Call when needed for visualisation and to check results
@@ -346,7 +347,6 @@ class image_converter_1:
       # self.joint2_pub.publish(self.joint2_angle)
       # self.joint3_pub.publish(self.joint3_angle)
       # self.joint4_pub.publish(self.joint4_angle)
-
       #publish joint centers with coordinates (y,z) taken from image 1
       self.joint_centers_yellow_pub1.publish(self.y_center)
       self.joint_centers_blue_pub1.publish(self.b_center)
@@ -371,5 +371,6 @@ def main(args):
 # run the code if the node is called
 if __name__ == '__main__':
     main(sys.argv)
+
 
 

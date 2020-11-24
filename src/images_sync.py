@@ -80,40 +80,14 @@ class images_sync:
     self.green_center1 = np.asarray(g1.data)
     self.red_center1 = np.asarray(r1.data)
     self.target_center1 = np.asarray(target1.data)
-    print(self.target_center1)
 
     self.yellow_center2 = np.asarray(y2.data)
     self.blue_center2 = np.asarray(b2.data)
     self.green_center2 = np.asarray(g2.data)
     self.red_center2 = np.asarray(r2.data)
     self.target_center2 = np.asarray(target2.data)
-    print(self.target_center2)
 
 
-
-
-    #blue and yellow should always on the same x and y-axis:
-    self.blue_center1[0] = self.yellow_center1[0]
-    self.blue_center2[0] = self.yellow_center2[0]
-
-    distance_blue_green_link1 = np.sqrt(np.sum((self.green_center1 - self.blue_center1) ** 2))
-    distance_blue_green_link2 = np.sqrt(np.sum((self.green_center2 - self.blue_center2) ** 2))
-    if distance_blue_green_link1 >= distance_blue_green_link2:
-      self.z_center =self.yellow_center1[1]
-      self.z_blue = self.blue_center1[1]
-      self.z_green = self.green_center1[1]
-      self.z_red = self.red_center1[1]
-    else:
-      self.z_center = self.yellow_center2[1]
-      self.z_blue = self.blue_center2[1]
-      self.z_green = self.green_center2[1]
-      self.z_red = self.red_center2[1]
-      # if distance_blue_green_link2 > 92:
-      #   self.z_green = self.z_green - self.z_green*0.015
-      #   self.green_center2[0] = self.green_center2[0] - self.green_center2[0]*0.015
-
-    print(np.sqrt(np.sum((np.array([self.green_center1]) - np.array([self.blue_center1])) ** 2)))
-    print(np.sqrt(np.sum((np.array([self.green_center2]) - np.array([self.blue_center2])) ** 2)))
 
 
     #blue and yellow should always on the same x and y-axis:
@@ -165,7 +139,28 @@ class images_sync:
     print("Yellow " + str(self.yellow_3d))
     print("Blue:"+ str(self.blue_3d))
     print("Green" + str(self.green_3d))
-    print("Red" + str(self.red_3d))
+    # r =np.array([(cos(a+b+c)+cos(a-b-c))/2,	-sin(b+c),	 (sin(a+b+c)+sin(a-b-c))/,	 (5*sin(a+b+c)+5*sin(a-b-c))/4
+    #     (sin(a+b+c)-sin(a-b-c))/2	 cos(b+c)	(-cos(a+b+c)+cos(a-b-c))/2	(-5*cos(a+b+c)+5*cos(a-b-c))/4
+    #               -sin(a)	        0	                    cos(a)	                (5*cos(a)+6)/2
+    #                     0	        0	                         0	                             1
+    #
+    # ]
+  def forward_kinematics(self):
+    pass
+
+
+
+  def forward_kinematics(self):
+    # a03 =np.array([(cos(a+b+c)+cos(a-b-c))/2,	-sin(b+c),	 (sin(a+b+c)+sin(a-b-c))/,	 (5*sin(a+b+c)+5*sin(a-b-c))/4
+    #     (sin(a+b+c)-sin(a-b-c))/2	 cos(b+c)	(-cos(a+b+c)+cos(a-b-c))/2	(-5*cos(a+b+c)+5*cos(a-b-c))/4
+    #               -sin(a)	        0	                    cos(a)	                (5*cos(a)+6)/2
+    #                     0	        0	                         0	                             1
+    #
+    # ]
+    pass
+
+
+
 
 
 
@@ -199,6 +194,30 @@ class images_sync:
     print("Blue Center: Img Coordinates" + str(self.blue_3d) )
 
     self.changeAxis()
+
+
+   #a01:
+    # np.array([
+    #   [0,0,1,0],
+    #   [1,0,0,0],
+    #   [0,1,0,5/2],
+    #   [0,0,0,1]
+    # ])
+
+    # #a12:
+    #
+    # np.array([
+    #   [-sin(a),0,cos(a),0],
+    #   [cos(a),0,sin(a),0],
+    #   [0,1,0,0],
+    #   [0,0,0,1]
+    # ])
+
+    #a02:
+    # 0	cos(a)	-sin(a)	5*cos(a)/2
+    # 0	sin(a)	 cos(a)	5*sin(a)/2
+    # 1	     0	      0	         0
+    # 0	     0	      0	         1
 
 
 
@@ -237,6 +256,19 @@ class images_sync:
       # self.green_3d[0] =
       print(self.green_3d)
     print(np.arcsin((self.green_3d[0])/3.5))
+
+
+    # np.arctan2()
+
+
+
+
+# (cos(a+b)+cos(a-b))/2	-sin(b)	 (sin(a+b)+sin(a-b))/2	 (5*sin(a+b)+5*sin(a-b))/4
+# (sin(a+b)-sin(a-b))/2	 cos(b)	(-cos(a+b)+cos(a-b))/2	(-5*cos(a+b)+5*cos(a-b))/4
+#                sin(a)	      0	               -cos(a)	           (-5*cos(a)+7)/2
+#                     0	      0	                     0	                         1
+#
+
 
 
 # call the class

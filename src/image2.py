@@ -172,7 +172,7 @@ class image_converter_2:
       # Using the outline, draw a rectangle that encloses the shape of the contour found
       topleft_x, topleft_y , width, height = cv2.boundingRect(contour_poly)
       # Draw outline of shape predicted to be a box to validate result
-      # self.draw_box_prediction(img, topleft_x,topleft_y , width, height)
+      #self.draw_box_prediction(img, topleft_x,topleft_y , width, height)
       #Box center would be located half the width and height
       box_center = [topleft_x + (width/2), topleft_y + (height/2)]
 

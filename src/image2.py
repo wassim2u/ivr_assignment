@@ -80,8 +80,8 @@ class image_converter_2:
   # Find the outline of a binary image of a specific circle, and use minEnclosingCircle to predict the center of circle
   # that is partly hidden behind an object.
   def predict_circle_center2(self, color, mask):
-    kernel = np.ones((3, 3), np.uint8)
-    opening_mask = cv2.morphologyEx(mask,cv2.MORPH_OPEN ,kernel)
+    morph_kernel = np.ones((5, 5), np.uint8)
+    opening_mask = cv2.morphologyEx(mask,cv2.MORPH_OPEN ,morph_kernel)
     #check whether circle is visible by checking its area:
     M = cv2.moments(opening_mask)
     area = M['m00']

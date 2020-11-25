@@ -116,8 +116,8 @@ class image_converter_1:
   # that is partly hidden behind an object.
   #These do not detect the orange target or box coordinates. Refer to other functions for those
   def predict_joint_center(self,color, mask):
-    kernel = np.ones((3, 3), np.uint8)
-    opening_mask = cv2.morphologyEx(mask,cv2.MORPH_OPEN ,kernel)
+    morph_kernel = np.ones((5, 5), np.uint8)
+    opening_mask = cv2.morphologyEx(mask,cv2.MORPH_OPEN ,morph_kernel)
     #check whether circle is visible by checking its area:
     M = cv2.moments(opening_mask)
     area = M['m00']
@@ -335,7 +335,7 @@ class image_converter_1:
 
     # update to current time
     self.time = rospy.get_time()
-    print(self.time)
+    #print(self.time)
 
     self.joint2_angle = Float64()
     self.joint3_angle = Float64()
@@ -345,12 +345,11 @@ class image_converter_1:
     try:
       self.image_pub1.publish(self.bridge.cv2_to_imgmsg(self.cv_image1, "bgr8"))
       #publish new joint angles
-
-      """
-      self.joint2_pub.publish(self.joint2_angle)
-      self.joint3_pub.publish(self.joint3_angle)
-      self.joint4_pub.publish(self.joint4_angle)
-      """
+      #
+      # self.joint2_pub.publish(self.joint2_angle)
+      # self.joint3_pub.publish(self.joint3_angle)
+      # self.joint4_pub.publish(self.joint4_angle)
+    
       #publish joint centers with coordinates (y,z) taken from image 1
       self.joint_centers_yellow_pub1.publish(self.y_center)
       self.joint_centers_blue_pub1.publish(self.b_center)

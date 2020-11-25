@@ -57,6 +57,10 @@ class controller:
         self.end_effector_FK_pub = rospy.Publisher("task3_1/end_effector_position/FK", Float64MultiArray, queue_size=10)
         self.end_effector_vision_pub = rospy.Publisher("task3_2/end_effector_position/vision", Float64MultiArray, queue_size=10)
 
+        self.prev_theta2 = 0.0
+        self.prev_theta3 = 0.0
+        self.prev_theta4 = 0.0
+
         # initialize a publisher to move the joint1
         self.joint1_pub = rospy.Publisher("/robot/joint1_position_controller/command", Float64, queue_size=10)
         # initialize a publisher to move the joint2
@@ -84,7 +88,7 @@ class controller:
         self.prev_time = rospy.get_time()
         self.error = np.array([0.0, 0.0, 0.0], dtype='float64')
         self.error_d = np.array([0.0, 0.0, 0.0], dtype='float64')
-        self.Kp = np.array([[0.8, 0, 0], [0, 0.8, 0], [0, 0, 0.8]])
+        self.Kp = np.array([[0.3, 0, 0], [0, 0.3, 0], [0, 0, 0.3]])
         self.Kd = np.array([[0.2, 0, 0], [0, 0.2, 0], [0, 0, 0.2]])
 
         # task4_2
@@ -255,8 +259,8 @@ class controller:
 
     def closed_loop_control(self, theta1, theta2, theta3, theta4, target):
         q =  np.array([theta1,theta2,theta3,theta4])
-
         #Get change in time
+
         current_time = rospy.get_time()
         dt = current_time - self.prev_time
         self.prev_time = current_time
@@ -313,7 +317,6 @@ class controller:
         zz = (7 * sp.cos(b + c) + 7 * sp.cos(b - c) + 6 * sp.cos(b + d) + 3 * sp.cos(b + c + d) + 3 * sp.cos(
             b - c + d) - 6 * sp.cos(b - d) + 3 * sp.cos(b + c - d) + 3 * sp.cos(b - c - d) + 10) / 4
         return [xx, yy, zz]
-
 
 
     def get_jacobian(self, theta1, theta2, theta3, theta4):
@@ -635,18 +638,9 @@ class controller:
         self.create_new_3d_coordinates_from_data(y1, b1, g1, r1, y2, b2, g2, r2, target1, target2, box1, box2)
         self.changeAxis()
 
-        # self.compute_joint_angles()
-        # green_joint = np.array([[self.green_3d[0]], [self.green_3d[1]], [self.green_3d[2]]])
-        # red_joint = np.array([[self.red_3d[0]], [self.red_3d[1]], self.red_3d[2]])
-        # print("Joint 4 error: ")
-        # #theta2, theta3, theta4, target = self.trajectory()
-        # theta2, theta3 = get_joint2_3_angles(green_joint)
-        # theta4 = get_joint4_angles(theta2, theta3, red_joint)
-        #
         #####Task 3_2 + 4_2 ###
         a,b,c = self.compute_joint_angles()
         traj_target = np.array(fk_matrix(0,a,b,c)).astype(np.float64)
-
 
         self.joint2_angle = Float64()
         self.joint3_angle = Float64()
@@ -655,18 +649,22 @@ class controller:
 
         actual_coordinate = fk_green(0.0, self.joint2_angle, self.joint3_angle)
 
+        fk = fk_matrix(self.q[0], self.q[1], self.q[2], self.q[3])
 
-        # blue_joint = np.array([[self.blue_3d[0]], [self.blue_3d[1]], [self.blue_3d[2]]])
-        # green_joint = np.array([[self.green_3d[0]], [self.green_3d[1]], [self.green_3d[2]]])
-        # actual_green = fk_green(0.0, self.joint2_angle, self.joint3_angle)
-        # red_joint = np.array([[self.red_3d[0]], [self.red_3d[1]], [self.red_3d[2]]])
-        # print("Coordinate error: ", green_joint - actual_green[0:3])
-        # print("Joint 4 error: ")
-        # #theta2, theta3, theta4, target = self.trajectory()
-        # print(blue_joint.shape, green_joint.shape, red_joint.shape)
-        # theta2, theta3 = get_joint2_3_angles(green_joint)
-        # theta4 = get_joint4_angles(theta2, theta3, blue_joint, green_joint, red_joint)
-        #
+        blue_joint = np.array([[self.blue_3d[0]], [self.blue_3d[1]], [self.blue_3d[2]]])
+        green_joint = np.array([[self.green_3d[0]], [self.green_3d[1]], [self.green_3d[2]]])
+        actual_green = fk_green(0.0, self.joint2_angle, self.joint3_angle)
+        red_joint = np.array([[self.red_3d[0]], [self.red_3d[1]], [self.red_3d[2]]])
+        print("Coordinate error: \n", green_joint-actual_green[0:3])
+        
+        #theta2, theta3, theta4, target = self.trajectory()
+        #print(blue_joint.shape, green_joint.shape, red_joint.shape)
+        theta2, theta3 = get_joint2_3_angles(green_joint, self.prev_theta2, self.prev_theta3)
+        print("Theta 3 error: \n", self.joint3_angle-theta3)
+        self.prev_theta2 = theta2
+        self.prev_theta3 = theta3
+        theta4 = get_joint4_angles(theta2, theta3, blue_joint, green_joint, red_joint)
+
         #####Task 3_2 + 4_2 ###
         # new_q = self.task4_2(theta1=self.q[0], theta2=self.q[1], theta3=self.q[2], theta4=self.q[3],
         #                      end_effector=self.red_3d,
@@ -676,7 +674,6 @@ class controller:
         # print("NEW Q: ")
         # print(new_q)
 
-        target =(self.yellow_3d-[400,400,500])* 0.0389
         new_q = self.closed_loop_control(0,self.q[1],self.q[2],self.q[3],self.target_3d)
         self.q = new_q
         print("NEW Q")
@@ -690,13 +687,11 @@ class controller:
 
 
         end_effector_FK = Float64MultiArray()
-        fk = fk_matrix(0.0, a, b, c)
         end_effector_FK.data = fk
         print( "FK NEW"+ str(end_effector_FK.data))
         end_effector_vision = Float64MultiArray()
         print("VISION" + str(self.red_3d))
         end_effector_vision.data = self.red_3d
-
 
         ### Task 2 ###
         # self.compute_joint_angles()
@@ -726,11 +721,11 @@ class controller:
             # Task 3_1
             self.end_effector_FK_pub.publish(end_effector_FK)
             self.end_effector_vision_pub.publish(end_effector_vision)
-            #Task 3_2
-            # self.joint1_pub.publish(new_q[0])
-            # self.joint2_pub.publish(new_q[1])
-            # self.joint3_pub.publish(new_q[2])
-            # self.joint4_pub.publish(new_q[3])
+            #Task 3_2 - Publishes the new angles found to the robot to follow the target
+            self.joint1_pub.publish(new_q[0])
+            self.joint2_pub.publish(new_q[1])
+            self.joint3_pub.publish(new_q[2])
+            self.joint4_pub.publish(new_q[3])
 
         except CvBridgeError as e:
             print(e)

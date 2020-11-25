@@ -181,7 +181,7 @@ def fk_green(theta1, theta2, theta3):
   np_fk = np.array(fk.col(3)).astype(np.float64)
   return np_fk
 
-def get_joint2_3_angles(joint4):
+def get_joint2_3_angles(joint4, prev_theta2, prev_theta3):
 
   xx = joint4[0]
   yy = joint4[1]
@@ -208,7 +208,10 @@ def get_joint2_3_angles(joint4):
   elif x < -1:
     x = -1
   theta3 = np.arcsin(x)
-  print(theta2)
+
+  #Prevent the angle from changing too quickly
+  if (abs(theta3-prev_theta3) > np.sqrt(2)/2): theta3 *= np.sqrt(2)/2
+
   y = (1/(-3.5*np.cos(theta3)))*yy
   if y > 1:
     y = 1
@@ -223,6 +226,7 @@ def get_joint2_3_angles(joint4):
 
   theta2 = np.arcsin(y)
 
+  if (abs(theta2-prev_theta2) > np.sqrt(2)/2): theta2 *= np.sqrt(2)/2
 
   #theta2 += np.arccos(z)
   #theta2 /= 2.0
@@ -252,6 +256,8 @@ def get_joint4_angles(theta2, theta3, blue_joint, green_joint, end_effector):
     link3_len = np.sqrt(sum(np.power(link3, 2)))
 
     return np.cos(numerator/(link2_len*link3_len))
+
+print(fk_matrix(0.0, 0.8, 0.0, -1.57))
 """
 a, b, c, d = symbols('a b c d')
 #print(fk_green(0.0, b, c))

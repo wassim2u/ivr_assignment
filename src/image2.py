@@ -82,6 +82,8 @@ class image_converter_2:
   def predict_circle_center2(self, color, mask):
     kernel = np.ones((3, 3), np.uint8)
     dilated_mask = cv2.dilate(mask, kernel, iterations=4)
+    morph_kernel = np.ones((5, 5), np.uint8)
+    opening_mask = cv2.morphologyEx(dilated_mask,cv2.MORPH_OPEN ,morph_kernel)
     #check whether circle is visible by checking its area:
     M = cv2.moments(dilated_mask)
     area = M['m00']

@@ -84,7 +84,7 @@ class controller:
         self.prev_time = rospy.get_time()
         self.error = np.array([0.0, 0.0, 0.0], dtype='float64')
         self.error_d = np.array([0.0, 0.0, 0.0], dtype='float64')
-        self.Kp = np.array([[0.5, 0, 0], [0, 0.5, 0], [0, 0, 0.5]])
+        self.Kp = np.array([[0.8, 0, 0], [0, 0.8, 0], [0, 0, 0.8]])
         self.Kd = np.array([[0.2, 0, 0], [0, 0.2, 0], [0, 0, 0.2]])
 
         # task4_2
@@ -176,8 +176,7 @@ class controller:
 
         print(self.z_yellow, self.z_blue, self.z_green, self.z_red)
 
-        # Note: Image 2 - xz plane; Image 1 - yz plane
-
+     # Note: Image 2 - xz plane; Image 1 - yz plane
     def create_new_3d_coordinates_from_data(self, y1, b1, g1, r1, y2, b2, g2, r2, target1, target2, box1, box2):
         self.yellow_center1 = (np.asarray(y1.data))
         self.blue_center1 = np.asarray(b1.data)
@@ -256,6 +255,7 @@ class controller:
 
     def closed_loop_control(self, theta1, theta2, theta3, theta4, target):
         q =  np.array([theta1,theta2,theta3,theta4])
+
         #Get change in time
         current_time = rospy.get_time()
         dt = current_time - self.prev_time
@@ -263,7 +263,9 @@ class controller:
 
         fk = fk_matrix(0.0, theta2, theta3, theta4)
         current_position = fk
+
         print(current_position)
+
         pos_d = target
 
 
@@ -273,8 +275,10 @@ class controller:
         # estimate error
         self.error = pos_d - current_position
 
-
-        j_inv = np.linalg.pinv(self.get_jacobian(0.0, theta2, theta3, theta4))
+        # Get psuedo_jacobian
+        jacobian = self.get_jacobian(theta1, theta2, theta3, theta4)
+        # jacobian = jacobian[1:4,:] #discard joint 1 since we fixed it
+        j_inv = self.get_inverse_jacobian(jacobian)
         print(j_inv)
         # calculate angular velocity of the joints
         dq_d = np.dot(j_inv, (np.dot(self.Kd, self.error_d.transpose()) + np.dot(self.Kp, self.error.T)))
@@ -287,7 +291,7 @@ class controller:
                 q_d[i] = np.pi/2
             if angle < -np.pi/2:
                 q_d[i] = -np.pi/2
-        q_d[i]
+
 
         return q_d
 
@@ -311,6 +315,7 @@ class controller:
         return [xx, yy, zz]
 
 
+
     def get_jacobian(self, theta1, theta2, theta3, theta4):
         a, b, c, d = symbols('a b c d')
 
@@ -318,6 +323,7 @@ class controller:
         xx = fk[0]
         yy = fk[1]
         zz = fk[2]
+
 
 
         # Using sympy diff, we can now compute the jacobian matrix:
@@ -579,6 +585,7 @@ class controller:
 
         # Get psuedo_jacobian
         jacobian = self.get_jacobian(theta1, theta2, theta3, theta4)
+        # jacobian = jacobian[:,1:4] #discard joint 1 since we fixed it
         pseudo_jacobian = self.get_inverse_jacobian(jacobian)
 
         # derivative of error
@@ -624,13 +631,6 @@ class controller:
         self.image_1_coordinates = np.array([y1, b1, g1, r1])
         self.image_2_coordinates = np.array([y2, b2, g2, r2])
 
-        # self.joint2_angle = Float64()
-        # self.joint3_angle = Float64()
-        # self.joint4_angle = Float64()
-        # self.joint2_angle,self.joint3_angle,self.joint4_angle = self.compute_joint_angles()
-        #
-        # actual_coordinate = fk_green(0.0, self.joint2_angle, self.joint3_angle)
-        #
         # Get coordinates from the two images and change the values to make them with respect to yellow center in meters
         self.create_new_3d_coordinates_from_data(y1, b1, g1, r1, y2, b2, g2, r2, target1, target2, box1, box2)
         self.changeAxis()
@@ -648,8 +648,26 @@ class controller:
         traj_target = np.array(fk_matrix(0,a,b,c)).astype(np.float64)
 
 
+        self.joint2_angle = Float64()
+        self.joint3_angle = Float64()
+        self.joint4_angle = Float64()
+        self.joint2_angle,self.joint3_angle,self.joint4_angle = self.compute_joint_angles()
+
+        actual_coordinate = fk_green(0.0, self.joint2_angle, self.joint3_angle)
 
 
+        # blue_joint = np.array([[self.blue_3d[0]], [self.blue_3d[1]], [self.blue_3d[2]]])
+        # green_joint = np.array([[self.green_3d[0]], [self.green_3d[1]], [self.green_3d[2]]])
+        # actual_green = fk_green(0.0, self.joint2_angle, self.joint3_angle)
+        # red_joint = np.array([[self.red_3d[0]], [self.red_3d[1]], [self.red_3d[2]]])
+        # print("Coordinate error: ", green_joint - actual_green[0:3])
+        # print("Joint 4 error: ")
+        # #theta2, theta3, theta4, target = self.trajectory()
+        # print(blue_joint.shape, green_joint.shape, red_joint.shape)
+        # theta2, theta3 = get_joint2_3_angles(green_joint)
+        # theta4 = get_joint4_angles(theta2, theta3, blue_joint, green_joint, red_joint)
+        #
+        #####Task 3_2 + 4_2 ###
         # new_q = self.task4_2(theta1=self.q[0], theta2=self.q[1], theta3=self.q[2], theta4=self.q[3],
         #                      end_effector=self.red_3d,
         #                      target=self.target_3d,
@@ -659,10 +677,10 @@ class controller:
         # print(new_q)
 
         target =(self.yellow_3d-[400,400,500])* 0.0389
-        new_q = self.closed_loop_control(self.q[0],self.q[1],self.q[2],self.q[3],traj_target)
-        # self.q = new_q
-        # print(new_q)
-
+        new_q = self.closed_loop_control(0,self.q[1],self.q[2],self.q[3],self.target_3d)
+        self.q = new_q
+        print("NEW Q")
+        print(new_q)
 
         # ---------For publishing-------#
         ###task2_2
@@ -670,13 +688,14 @@ class controller:
         target.data = self.target_3d
         ###task3_1
 
+
         end_effector_FK = Float64MultiArray()
         fk = fk_matrix(0.0, a, b, c)
         end_effector_FK.data = fk
         print( "FK NEW"+ str(end_effector_FK.data))
         end_effector_vision = Float64MultiArray()
+        print("VISION" + str(self.red_3d))
         end_effector_vision.data = self.red_3d
-
 
 
         ### Task 2 ###
@@ -684,24 +703,23 @@ class controller:
         # green_joint = np.array([[self.green_3d[0]], [self.green_3d[1]], [self.green_3d[2]]])
         # red_joint = np.array([[self.red_3d[0]], [self.red_3d[1]], self.red_3d[2]])
         # print("Joint 4 error: ")
-        # #theta2, theta3, theta4, target = self.trajectory()
+        #theta2, theta3, theta4, target = self.trajectory()
         # theta2, theta3 = get_joint2_3_angles(green_joint)
         # theta4 = get_joint4_angles(theta2, theta3, red_joint)
 
         try:
-            ###TASK 2 ###
             # self.joint2_t2.publish(theta2)
             # self.joint3_t3.publish(theta3)
             # self.joint4_t4.publish(theta4)
-            # self.green_joint3dx.publish(self.green_3d[0])
-            # self.green_joint3dy.publish(self.green_3d[1])
-            # self.green_joint3dz.publish(self.green_3d[2])
-            # self.green_joint3dax.publish(actual_coordinate[0])
-            # self.green_joint3day.publish(actual_coordinate[1])
-            # self.green_joint3daz.publish(actual_coordinate[2])
-            #self.joint2_pub.publish(self.joint2_angle)
-            #self.joint3_pub.publish(self.joint3_angle)
-            #self.joint4_pub.publish(self.joint4_angle)
+            self.green_joint3dx.publish(self.green_3d[0])
+            self.green_joint3dy.publish(self.green_3d[1])
+            self.green_joint3dz.publish(self.green_3d[2])
+            self.green_joint3dax.publish(actual_coordinate[0])
+            self.green_joint3day.publish(actual_coordinate[1])
+            self.green_joint3daz.publish(actual_coordinate[2])
+            # self.joint2_pub.publish(self.joint2_angle)
+            # self.joint3_pub.publish(self.joint3_angle)
+            # self.joint4_pub.publish(self.joint4_angle)
 
             # Task 2_2
             self.target_3d_pub.publish(target)
@@ -709,13 +727,11 @@ class controller:
             self.end_effector_FK_pub.publish(end_effector_FK)
             self.end_effector_vision_pub.publish(end_effector_vision)
             #Task 3_2
-            self.joint1_pub.publish(new_q[0])
-            self.joint2_pub.publish(new_q[1])
-            self.joint3_pub.publish(new_q[2])
-            self.joint4_pub.publish(new_q[3])
+            # self.joint1_pub.publish(new_q[0])
+            # self.joint2_pub.publish(new_q[1])
+            # self.joint3_pub.publish(new_q[2])
+            # self.joint4_pub.publish(new_q[3])
 
-         
- 
         except CvBridgeError as e:
             print(e)
 

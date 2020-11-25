@@ -117,9 +117,9 @@ class image_converter_1:
   #These do not detect the orange target or box coordinates. Refer to other functions for those
   def predict_joint_center(self,color, mask):
     kernel = np.ones((3, 3), np.uint8)
-    dilated_mask = cv2.dilate(mask, kernel, iterations=4)
+    opening_mask = cv2.morphologyEx(mask,cv2.MORPH_OPEN ,kernel)
     #check whether circle is visible by checking its area:
-    M = cv2.moments(dilated_mask)
+    M = cv2.moments(opening_mask)
     area = M['m00']
     #If the circle is completely hidden, return the previous value
     if (area<0.01):
@@ -129,10 +129,11 @@ class image_converter_1:
       self.is_circle_visible[color] = True
 
     #Find outline of the shape of the masked circle
-    contours, hierarchy = cv2.findContours(dilated_mask, 1, 2)
+    contours, hierarchy = cv2.findContours(opening_mask, 1, 2)
     contour_poly = cv2.approxPolyDP(curve=contours[0], epsilon=0.1, closed=True)
     #Using the outline, draw a circle that encloses the shape of the contour found
     center, radius = cv2.minEnclosingCircle(contour_poly)
+
     return np.array([int(center[0]), int(center[1])])
 
 
@@ -198,7 +199,7 @@ class image_converter_1:
       # Using the outline, draw a circle that encloses the shape of the contour found
       target_center, radius = cv2.minEnclosingCircle(contour_poly)
       # Draw outline of shape predicted to be a sphere to validate result
-      self.draw_circle_prediction(img, target_center, radius)
+      # self.draw_circle_prediction(img, target_center, radius)
 
   #If the box is not visible, return the center positions calculated previously
     if (not self.is_box_visible):
@@ -230,7 +231,7 @@ class image_converter_1:
     color = [255, 23, 0]
     line_thickness = 2
     cv2.circle(new_img, (int(center[0]), int(center[1])), int(radius), color, line_thickness)
-    #cv2.imshow('Image with predicted shape of circle', new_img)
+    cv2.imshow('Image with predicted shape of circle', new_img)
     # cv2.waitKey(1)
 
   # Draws a rectangle on the image. Call when needed for visualisation and to check results
@@ -344,11 +345,12 @@ class image_converter_1:
     try:
       self.image_pub1.publish(self.bridge.cv2_to_imgmsg(self.cv_image1, "bgr8"))
       #publish new joint angles
-      # """
-      # self.joint2_pub.publish(self.joint2_angle)
-      # self.joint3_pub.publish(self.joint3_angle)
-      # self.joint4_pub.publish(self.joint4_angle)
-      # """
+
+      """
+      self.joint2_pub.publish(self.joint2_angle)
+      self.joint3_pub.publish(self.joint3_angle)
+      self.joint4_pub.publish(self.joint4_angle)
+      """
       #publish joint centers with coordinates (y,z) taken from image 1
       self.joint_centers_yellow_pub1.publish(self.y_center)
       self.joint_centers_blue_pub1.publish(self.b_center)

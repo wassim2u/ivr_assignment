@@ -89,7 +89,7 @@ class controller:
         self.prev_time = rospy.get_time()
         self.error = np.array([0.0, 0.0, 0.0], dtype='float64')
         self.error_d = np.array([0.0, 0.0, 0.0], dtype='float64')
-        self.Kp = np.array([[0.3, 0, 0], [0, 0.3, 0], [0, 0, 0.3]])
+        self.Kp = np.array([[0.4, 0, 0], [0, 0.4, 0], [0, 0, 0.4]])
         self.Kd = np.array([[0.4, 0, 0], [0, 0.4, 0], [0, 0, 0.4]])
 
 
@@ -362,10 +362,12 @@ class controller:
         # estimate error
         self.error = pos_d - current_position
 
+
         # Get pseudo-jacobian, from the jacobian derived from the end effector positions from the FK equation
         jacobian = self.get_jacobian(theta1, theta2, theta3, theta4)
         j_inv = self.get_inverse_jacobian(jacobian)
-        print(j_inv)
+
+
         # calculate velocity of the joints
         dq_d = np.dot(j_inv, (np.dot(self.Kd, self.error_d.transpose()) + np.dot(self.Kp, self.error.T)))
         q_d = q + (dt * dq_d)
@@ -551,7 +553,8 @@ class controller:
 
         # Get the change in time
         dt = self.calculate_delta_t()
-        secondary_task = self.compute_secondary_task_4_2(jacobian, end_effector, box_obstacle, old_q)
+        #compute secondary task
+        secondary_task = self.compute_secondary_task_4_2(end_effector, box_obstacle, old_q)
 
 
         # derivative of error
@@ -594,7 +597,7 @@ class controller:
     # Differentiate cost with respect to q, given cost function,
     # which will be the distance between end effector and box.
     # The secondary task is to maximise this distance to avoid the box.
-    def compute_secondary_task_4_2(self, jacobian, end_effector, box_obstacle, q):
+    def compute_secondary_task_4_2(self, end_effector, box_obstacle, q):
         # define k0 constant , which signifies how fast we want to move in the derivative direction
         k0_constant = 0.001
 
@@ -628,7 +631,6 @@ class controller:
         self.previous_end_effector_position = end_effector
         self.previous_box_obstacle_position = box_obstacle
         self.previous_q = q
-        self.previous_jacobian = jacobian
 
         # Finally, calculate the secondary task. k0_constant tells us how fast or how slow we want to do t
         qdot_zero = k0_constant * cost_derivative.T
@@ -667,7 +669,7 @@ class controller:
         self.joint2_angle,self.joint3_angle,self.joint4_angle = self.compute_joint_angles()
 
         actual_coordinate = fk_green(0.0, self.joint2_angle, self.joint3_angle)
-        fk = fk_matrix(np.pi/2, np.pi/2, np.pi/2, np.pi/2)
+        fk = fk_matrix(np.pi/8, np.pi/2, np.pi/8, np.pi/2)
 
         blue_joint = np.array([[self.blue_3d[0]], [self.blue_3d[1]], [self.blue_3d[2]]])
         green_joint = np.array([[self.green_3d[0]], [self.green_3d[1]], [self.green_3d[2]]])
@@ -682,20 +684,23 @@ class controller:
         # theta4 = get_joint4_angles(theta2, theta3, blue_joint, green_joint, red_joint)
 
         # ---- Task 3_2 ---- #
-        # new_q = self.closed_loop_control(theta1=0,theta2 = self.q[1],theta3 = self.q[2], theta4 = self.q[3],
-        #                                  target= self.target_3d)
-        # self.q = new_q
+        new_q = self.closed_loop_control(theta1=0,
+                                         theta2 = self.q[1],
+                                         theta3 = self.q[2],
+                                         theta4 = self.q[3],
+                                         target= self.target_3d)
+        self.q = new_q
 
 
         # # ---- Task 4_2 ---- #
-        new_q = self.null_space_control(theta1=self.q[0], theta2=self.q[1], theta3=self.q[2], theta4=self.q[3],
-                             end_effector=self.red_3d,
-                             target=self.target_3d,
-                             box_obstacle=self.box_3d
-                             )
-        print("NEW Q: ")
-        print(new_q)
-        self.q = new_q
+        # new_q = self.null_space_control(theta1=self.q[0], theta2=self.q[1], theta3=self.q[2], theta4=self.q[3],
+        #                      end_effector=self.red_3d,
+        #                      target=self.target_3d,
+        #                      box_obstacle=self.box_3d
+        #                      )
+        # print("NEW Q: ")
+        # print(new_q)
+        # self.q = new_q
 
 
 
@@ -749,7 +754,7 @@ class controller:
             # Task 3_1 - Publishes the coordinates of the end effector found through vision and through the FK equation.
             self.end_effector_FK_pub.publish(end_effector_FK)
             self.end_effector_vision_pub.publish(end_effector_vision)
-            #Task 3_2 / Task 4_2 - Publishes the new angles found to the robot to follow the target
+            #Task 3_2 / Task 4_2 - Publishes the new angles computed to the robot to follow the target
             self.joint1_pub.publish(new_q[0])
             self.joint2_pub.publish(new_q[1])
             self.joint3_pub.publish(new_q[2])

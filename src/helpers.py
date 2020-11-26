@@ -123,7 +123,7 @@ def a_1_2(theta2):
     [0, sp.sin(sp.pi/2), sp.cos(sp.pi/2), 0],
     [0, 0, 0, 1]
   ])
-  print(type(rot_z), type(rot_x))
+  # print(type(rot_z), type(rot_x))
   mtx_1_2 = rot_z*rot_x
   return mtx_1_2
 

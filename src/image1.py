@@ -26,6 +26,8 @@ class image_converter_1:
     self.image_sub1 = rospy.Subscriber("/camera1/robot/image_raw",Image,self.callback1)
     # initialize the bridge between openCV and ROS
     self.bridge = CvBridge()
+    #initialize a publisher to move the joint1
+    self.joint1_pub = rospy.Publisher("/robot/joint1_position_controller/command", Float64, queue_size=10)
     #initialize a publisher to move the joint2
     self.joint2_pub = rospy.Publisher("/robot/joint2_position_controller/command", Float64, queue_size=10)
     #initialize a publisher to move the joint3

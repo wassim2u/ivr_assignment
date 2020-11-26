@@ -271,7 +271,7 @@ class controller:
         # print("Blue:" + str(self.blue_3d))
         # print("Green" + str(self.green_3d))
         # print("Red" + str(self.red_3d))
-        #
+
 
 
 
@@ -305,27 +305,17 @@ class controller:
         j_33 = diff(zz, c)
         j_34 = diff(zz, d)
 
+
         # Now make it a proper matrix substituting the actual angles
         jacobian = Matrix([
-            [j_11.subs(a, theta1).subs(b, theta2).subs(c, theta3).subs(d, theta4),
-             j_12.subs(a, theta1).subs(b, theta2).subs(c, theta3).subs(d, theta4),
-             j_13.subs(a, theta1).subs(b, theta2).subs(c, theta3).subs(d, theta4),
-             j_14.subs(a, theta1).subs(b, theta2).subs(c, theta3).subs(d, theta4),
-             ],
-
-            [j_21.subs(a, theta1).subs(b, theta2).subs(c, theta3).subs(d, theta4),
-             j_22.subs(a, theta1).subs(b, theta2).subs(c, theta3).subs(d, theta4),
-             j_23.subs(a, theta1).subs(b, theta2).subs(c, theta3).subs(d, theta4),
-             j_24.subs(a, theta1).subs(b, theta2).subs(c, theta3).subs(d, theta4),
-            ],
-
-            [j_31.subs(a, theta1).subs(b, theta2).subs(c, theta3).subs(d, theta4),
-             j_32.subs(a, theta1).subs(b, theta2).subs(c, theta3).subs(d, theta4),
-             j_33.subs(a, theta1).subs(b, theta2).subs(c, theta3).subs(d, theta4),
-             j_34.subs(a, theta1).subs(b, theta2).subs(c, theta3).subs(d, theta4)
-            ]
-
+            [j_11, j_12, j_13, j_14],
+            [j_21, j_22, j_23, j_24],
+            [j_31, j_32, j_33, j_34],
         ])
+        (print(jacobian[:,3]))
+
+        jacobian = jacobian.subs(a, theta1).subs(b, theta2).subs(c, theta3).subs(d, theta4)
+
         jacobian = np.array(jacobian).astype(np.float64)
         # jacobian = np.empty((3,4))
         return jacobian
@@ -380,161 +370,6 @@ class controller:
                 q_d[i] = -np.pi / 2
 
         return q_d
-
-
-
-    def blue_joint_rotation(self, green_joint):
-
-        # Assume we are at a joint rotation of 0 for both joints
-        theta2 = 0.0
-        theta3 = 0.0
-
-        green_curr = Matrix([[0.0], [0.0], [6.0]])
-
-        a, b, c = symbols('a b c')
-
-        # Treat green joint as end effector, act as if blue had been rotated by 0 degrees and we wanted to see how to get to the desired position of the green joint
-        # First, get the forward kinematics function up until green (treating green as the end effector)
-        a01 = a_0_1(0.0)
-        a02 = a01 * a_1_2(b)
-        a03 = a02 * a_2_3(c)
-
-        # get the jacobian of this function
-        xx = a03.col(3).row(0)
-        yy = a03.col(3).row(1)
-        zz = a03.col(3).row(2)
-
-        jacobian = Matrix([
-            [diff(xx, a), diff(xx, b), diff(xx, c)],
-            [diff(yy, a), diff(yy, b), diff(yy, c)],
-            [diff(zz, a), diff(zz, b), diff(zz, c)]
-        ])
-
-        # get pseudo-inverse jacobian
-        j_inv = jacobian.pinv()
-
-        coordinate_difference = green_curr - green_joint
-        current_error = coordinate_difference
-        delta_t = 1
-
-        q_dot = j_inv * (current_error)
-        q_dot = q_dot.subs(b, theta2)
-        q_dot = q_dot.subs(c, theta3)
-
-        print(q_dot)
-
-    def last_attempt(self, bg):
-        a, b = symbols('a b')
-        rot_x = Matrix([[sp.cos(a), -sp.sin(a), 0, 0], [sp.sin(a), sp.cos(a), 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
-        rot_y = Matrix([[sp.sin(b), -sp.cos(b), 0, 0], [sp.cos(b), sp.sin(b), 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
-        arr = Matrix([[0.0], [0.0], [1.0], [1.0]])
-
-        transform = rot_x * rot_y * arr
-
-        x = Eq(sp.asin(a) * sp.asin(b), bg[0, 0])
-        y = Eq(-sp.acos(a) * sp.asin(b), bg[1, 0])
-        z = Eq(sp.acos(b), bg[2, 0])
-
-        print(sp.solve((x, y, z), (b)))
-
-    def rotation_matrix_from_vectors(self, vec1, vec2):
-        """ Find the rotation matrix that aligns vec1 to vec2
-        :param vec1: A 3d "source" vector
-        :param vec2: A 3d "destination" vector
-        :return mat: A transform matrix (3x3) which when applied to vec1, aligns it with vec2.
-        """
-        a, b = (vec1 / np.linalg.norm(vec1)).reshape(3), (vec2 / np.linalg.norm(vec2)).reshape(3)
-        v = np.cross(a, b)
-        c = np.dot(a, b)
-        s = np.linalg.norm(v)
-        kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
-        rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
-        a = np.arctan2(rotation_matrix[2, 1], rotation_matrix[2, 2])
-        b = np.arctan2(-rotation_matrix[2, 0], np.sqrt((rotation_matrix[2, 1] ** 2) + rotation_matrix[2, 2] ** 2))
-        c = np.arctan2(rotation_matrix[1, 0], rotation_matrix[0, 0])
-        print(a, b, c)
-        return rotation_matrix
-
-    def task_2_1(self):
-        # First we need the forwards kinematics equations, giving the thetas as variables
-        a = 0.0
-        b, c, d = symbols('b c d')
-
-        x_rot = Matrix([[sp.cos(b), -sp.sin(b), 0, 0], [sp.sin(b), sp.cos(b), 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
-        y_rot = Matrix([[sp.cos(c), -sp.sin(c), 0, 0], [sp.sin(c), sp.cos(c), 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
-        init = Matrix([[0.0], [0.0], [1.0], [1.0]])
-        diff_1_3_y = self.blue_3d[1] - self.green_3d[1]
-        diff_1_3_x = self.blue_3d[0] - self.green_3d[0]
-        diff_1_3_z = self.blue_3d[2] - self.green_3d[2]
-        diff_1_3_x = self.blue_3d[0] - self.green_3d[0]
-        diff_1_3_y = self.blue_3d[1] - self.green_3d[1]
-        diff_1_3_z = self.blue_3d[2] - self.green_3d[2]
-        v = Matrix([[diff_1_3_x], [diff_1_3_y], [diff_1_3_z], [1]])
-        transform = (x_rot * y_rot * v)
-        print(transform)
-
-        # Get the frame transformations
-        a01 = a_0_1(a)
-
-        # We do not need to compute a, since joint 1 is fixed and hence we will always have a=0.0
-        # To compute the angle of joint 2, we need the coordinates of the center of joint 2 and joint 4 and subtract them
-
-        # v = Matrix([[diff_1_3_x], [diff_1_3_y], [diff_1_3_z], [1]])
-        # print(a01.shape)
-        # mtx = (a01.inv())*v
-        # m = sp.atan(mtx[1,0]/mtx[0,0])
-        # a02 = a_1_2(m)*a01
-        # mtx2 = a02.inv()*v
-        # m2 = sp.atan(mtx2[2,0]/mtx2[1,0])
-        # a03 = (a_2_3(m2)*a02)
-        # theta2 = np.arctan2(mtx.row(1).col(0), mtx.row(2).col(0))
-        # transform = mtx.inv()*v
-        # mtx3 = a03.inv()*mtx2
-        # m3 = sp.atan(mtx3[1,0]/mtx3[0,0])
-        # a03 = a_3_4(m3)*a03
-        # mtx4 = a03.inv()*mtx3
-        # m3 = np.arctan2(mtx4[2,0], mtx[1,0])
-
-        # theta3 = np.arctan2(transform.row(1), transform.row(2))
-        # print(m, m2)
-
-        # a03 = a_2_3(c)*a02
-        # a04 = a_3_4(d)*a03
-
-    """
-    #Generates angles for the robot in accordance with task 3.1
-    def task_3_1(self):
-
-        angles_file = open("../angles.txt", "w")
-        readings_file = open("../readings.txt", "w")
-
-        for i in range(10):
-            theta1 = 0
-            theta2 = 0
-            theta3 = 0
-            theta4 = 0
-
-            #please don't put this on r/badcode
-            while (theta1 == 0 or abs(theta1) == 1  or theta2 == 0 or abs(theta2) == 1 or theta3 == 0 or abs(theta3) == 1 or theta4 == 0 or abs(theta4) == 1):
-                theta1 = random.randint(-10, 10)
-                theta2 = random.randint(-10, 10)
-                theta3 = random.randint(-10, 10)
-                theta4 = random.randint(-10, 10)
-
-            theta1 = np.pi/(theta1)
-            theta2 = np.pi/(theta2)
-            theta3 = np.pi/(theta3)
-            theta4 = np.pi/(theta4)
-
-            angles_file.write("%.4f %.4f %.4f %.4f\n" %(theta1, theta2, theta3, theta4))
-
-            readings = self.get_jacobian(theta1, theta2, theta3, theta4)
-            readings_file.write("%.4f %.4f %.4f\n" %(readings[0], readings[1], readings[2]))
-
-        readings_file.close()
-        angles_file.close()
-        print("Successfully written to files.")
-    """
 
 
     #Task 4_2:
@@ -594,9 +429,8 @@ class controller:
 
         return new_q
 
-    # Differentiate cost with respect to q, given cost function,
-    # which will be the distance between end effector and box.
-    # The secondary task is to maximise this distance to avoid the box.
+    #Differentiate cost with respect to q, given cost function, which will be the distance between end effector and box.
+    #The secondary task is to maximise this distance to avoid the box.
     def compute_secondary_task_4_2(self, end_effector, box_obstacle, q):
         # define k0 constant , which signifies how fast we want to move in the derivative direction
         k0_constant = 0.001
@@ -636,22 +470,6 @@ class controller:
         qdot_zero = k0_constant * cost_derivative.T
 
         return qdot_zero
-    ###Functions to move joints 2-4 ###
-    def move_joint2(self, t):
-        return (np.pi / 2) * np.sin((np.pi / 15.0) * t)
-
-    def move_joint3(self, t):
-        return (np.pi / 2) * np.sin((np.pi / 18.0) * t)
-
-    def move_joint4(self, t):
-        return (np.pi / 2) * np.sin((np.pi / 20.0) * t)
-
-    def compute_joint_angles(self):
-        time = rospy.get_time()
-        joint2_angle = self.move_joint2(time)
-        joint3_angle = self.move_joint3(time)
-        joint4_angle = self.move_joint4(time)
-        return joint2_angle, joint3_angle, joint4_angle
 
     def callback(self, y1, b1, g1, r1, y2, b2, g2, r2, target1, target2, box1, box2):
         self.image_1_coordinates = np.array([y1, b1, g1, r1])
@@ -661,21 +479,10 @@ class controller:
         self.create_new_3d_coordinates_from_data(y1, b1, g1, r1, y2, b2, g2, r2, target1, target2, box1, box2)
         self.changeAxis()
 
-        #####Task 3_2 + 4_2 ###
-        a,b,c = self.compute_joint_angles()
-        self.joint2_angle = Float64()
-        self.joint3_angle = Float64()
-        self.joint4_angle = Float64()
-        self.joint2_angle,self.joint3_angle,self.joint4_angle = self.compute_joint_angles()
 
         actual_coordinate = fk_green(0.0, self.joint2_angle, self.joint3_angle)
         fk = fk_matrix(np.pi/8, np.pi/2, np.pi/8, np.pi/2)
 
-        blue_joint = np.array([[self.blue_3d[0]], [self.blue_3d[1]], [self.blue_3d[2]]])
-        green_joint = np.array([[self.green_3d[0]], [self.green_3d[1]], [self.green_3d[2]]])
-        actual_green = fk_green(0.0, self.joint2_angle, self.joint3_angle)
-        red_joint = np.array([[self.red_3d[0]], [self.red_3d[1]], [self.red_3d[2]]])
-        # print("Coordinate error: \n", green_joint-actual_green[0:3])
         
         theta2, theta3 = get_joint2_3_angles(green_joint, self.prev_theta2, self.prev_theta3)
         # print("Theta 3 error: \n", self.joint3_angle-theta3)
@@ -684,56 +491,36 @@ class controller:
         # theta4 = get_joint4_angles(theta2, theta3, blue_joint, green_joint, red_joint)
 
         # ---- Task 3_2 ---- #
-        new_q = self.closed_loop_control(theta1=0,
-                                         theta2 = self.q[1],
-                                         theta3 = self.q[2],
-                                         theta4 = self.q[3],
-                                         target= self.target_3d)
-        self.q = new_q
-
-
-        # # ---- Task 4_2 ---- #
-        # new_q = self.null_space_control(theta1=self.q[0], theta2=self.q[1], theta3=self.q[2], theta4=self.q[3],
-        #                      end_effector=self.red_3d,
-        #                      target=self.target_3d,
-        #                      box_obstacle=self.box_3d
-        #                      )
-        # print("NEW Q: ")
-        # print(new_q)
+        # new_q = self.closed_loop_control(theta1=0,
+        #                                  theta2=self.q[1],
+        #                                  theta3=self.q[2],
+        #                                  theta4=self.q[3],
+        #                                  target=self.target_3d)
         # self.q = new_q
 
 
-
-
-        #task 2 angle 4 attempt
-        # theta4 = - np.arctan2(self.red_3d[1],self.red_3d[2])  + theta2 - 2
-        theta4 = - np.arctan2(self.red_3d[0] - self.green_3d[0], self.red_3d[2]- self.green_3d[2] ) - theta2
-        print("ANGLES " + str(theta4))
-        # theta4 = np.pi/2 + theta4 - 0.4
-
-
+        # ---- Task 4_2 ---- #
+        new_q = self.null_space_control(theta1=self.q[0], theta2=self.q[1], theta3=self.q[2], theta4=self.q[3],
+                             end_effector=self.red_3d,
+                             target=self.target_3d,
+                             box_obstacle=self.box_3d
+                             )
+        print("NEW Q: ")
+        print(new_q)
+        self.q = new_q
 
         # ---------For publishing-------#
         ###task2_2
         target = Float64MultiArray()
         target.data = self.target_3d
         ###task3_1
-
         end_effector_FK = Float64MultiArray()
         end_effector_FK.data = fk
-        print( "FK NEW"+ str(end_effector_FK.data))
         end_effector_vision = Float64MultiArray()
-        print("VISION" + str(self.red_3d))
         end_effector_vision.data = self.red_3d
 
-        ### Task 2 ###
-        # self.compute_joint_angles()
-        # green_joint = np.array([[self.green_3d[0]], [self.green_3d[1]], [self.green_3d[2]]])
-        # red_joint = np.array([[self.red_3d[0]], [self.red_3d[1]], self.red_3d[2]])
-        # print("Joint 4 error: ")
-        #theta2, theta3, theta4, target = self.trajectory()
-        # theta2, theta3 = get_joint2_3_angles(green_joint)
-        # theta4 = get_joint4_angles(theta2, theta3, red_joint)
+
+
 
         try:
             self.joint2_t2.publish(theta2)

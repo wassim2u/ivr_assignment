@@ -26,8 +26,6 @@ class image_converter_1:
     self.image_sub1 = rospy.Subscriber("/camera1/robot/image_raw",Image,self.callback1)
     # initialize the bridge between openCV and ROS
     self.bridge = CvBridge()
-    #initialize a publisher to move the joint1
-    self.joint1_pub = rospy.Publisher("/robot/joint1_position_controller/command", Float64, queue_size=10)
     #initialize a publisher to move the joint2
     self.joint2_pub = rospy.Publisher("/robot/joint2_position_controller/command", Float64, queue_size=10)
     #initialize a publisher to move the joint3
@@ -129,7 +127,9 @@ class image_converter_1:
     contours, hierarchy = cv2.findContours(opening_mask, 1, 2)
     contour_poly = cv2.approxPolyDP(curve=contours[0], epsilon=0.1, closed=True)
     #Using the outline, draw a circle that encloses the shape of the contour found
-    center, radius = cv2.minEnclosingCircle(contour_poly)
+    center, radius = cv2.minEnclosingCircle(contours[0])
+    if color == "Red":
+      self.draw_circle_prediction(self.cv_image1, center,radius)
 
     return np.array([int(center[0]), int(center[1])])
 
@@ -322,7 +322,6 @@ class image_converter_1:
     try:
       self.image_pub1.publish(self.bridge.cv2_to_imgmsg(self.cv_image1, "bgr8"))
       #publish new joint angles
-      #
       # self.joint2_pub.publish(self.joint2_angle)
       # self.joint3_pub.publish(self.joint3_angle)
       # self.joint4_pub.publish(self.joint4_angle)

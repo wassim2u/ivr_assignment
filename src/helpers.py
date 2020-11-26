@@ -242,7 +242,7 @@ def get_joint4_angles(theta2, theta3, blue_joint, green_joint, end_effector):
       x = 1
     elif x < -1:
       x = -1
-    print(x)
+    # print(x)
     return np.arccos(x)
   else:
     #Get direction vectors
@@ -255,7 +255,9 @@ def get_joint4_angles(theta2, theta3, blue_joint, green_joint, end_effector):
 
     return np.cos(numerator/(link2_len*link3_len))
 
-print(fk_matrix(0.0, 0.8, 0.0, -1.57))
+
+
+# print(fk_matrix(0.0, 0.8, 0.0, -1.57))
 """
 >>>>>>> a992bbfc9d1a7f1325251c993efad5da5cf2fde6
 a, b, c, d = symbols('a b c d')

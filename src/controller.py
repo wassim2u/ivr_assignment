@@ -70,8 +70,7 @@ class controller:
         # initialize a publisher to move the joint4
         self.joint4_pub = rospy.Publisher("/robot/joint4_position_controller/command", Float64, queue_size=10)
 
-        self.q = np.array([0,0,0,0])
-        self.rate = rospy.Rate(20)
+        self.q = np.array([1.0,1.0,1.0,1.0])
 
         # synchronise incoming channels using the timestamps contained in their headers
         # slop defines the delay in seconds with which messages are synchronized
@@ -89,12 +88,18 @@ class controller:
         self.error = np.array([0.0, 0.0, 0.0], dtype='float64')
         self.error_d = np.array([0.0, 0.0, 0.0], dtype='float64')
         self.Kp = np.array([[0.3, 0, 0], [0, 0.3, 0], [0, 0, 0.3]])
-        self.Kd = np.array([[0.2, 0, 0], [0, 0.2, 0], [0, 0, 0.2]])
+        self.Kd = np.array([[0.4, 0, 0], [0, 0.4, 0], [0, 0, 0.4]])
+
+        # task3_2
+        self.previous_jacobian = np.ones((3,4))
+
 
         # task4_2
-        self.previous_q = np.array([0.01, 0.01, 0.01, 0.01])
+        self.previous_q = np.array([0.0, 0.0, 0.0, 0.0])
         self.previous_end_effector_position = np.array([0.0, 0.0, 0.0])
         self.previous_box_obstacle_position = np.array([0.0, 0.0, 0.0])
+        self.Kp_4_2 = np.array([[0.6, 0, 0], [0, 0.6, 0], [0, 0, 0.6]])
+        self.Kd_4_2 = np.array([[0.1, 0, 0], [0, 0.1, 0], [0, 0, 0.1]])
 
 
     def get_x(self, image_1_coordinates):
@@ -268,7 +273,6 @@ class controller:
         fk = fk_matrix(0.0, theta2, theta3, theta4)
         current_position = fk
 
-        print(current_position)
 
         pos_d = target
 
@@ -289,7 +293,6 @@ class controller:
         q_d = q + (dt * dq_d)
         #Our configuration space for theta2,theta3, and theta4 is between -pi/2 and pi/2
         for i in range(1,4):
-            print(i)
             angle = q_d[i]
             if angle > np.pi/2:
                 q_d[i] = np.pi/2
@@ -539,35 +542,42 @@ class controller:
         self.prev_time = current_time
         return dt
 
-    # Differentiate cost with respect to q, given cost function, a constant, and
-    def compute_secondary_task(self, end_effector, box_obstacle, q, k0_constant):
+    # Differentiate cost with respect to q, given cost function.
+    def compute_secondary_task(self, jacobian, end_effector, box_obstacle, q, k0_constant):
         q0, q1, q2, q3 = q[0], q[1], q[2], q[3]
         dq0 = q0 - self.previous_q[0]
         dq1 = q1 - self.previous_q[1]
         dq2 = q2 - self.previous_q[2]
         dq3 = q3 - self.previous_q[3]
-        print(dq3)
+
 
         # Cost function is distance between end effector and box squared.
-        # Maximise this secondary task , ie) maximise the distance, to avoid  the box
-        cost = np.transpose(end_effector - box_obstacle).dot(end_effector - box_obstacle)
+        # Maximise two secondary tasks , i) maximise the distance, to avoid  the box ii) Avoid singularity
+        cost1 = np.linalg.norm(end_effector - box_obstacle)
+        cost2 = np.sqrt(np.linalg.det(jacobian.dot(jacobian.T)))
+        cost = (cost1+ cost2)
         previous_end_eff = self.previous_end_effector_position
         previous_obstacle = self.previous_box_obstacle_position
-        previous_cost = np.transpose(previous_end_eff - previous_obstacle).dot(previous_end_eff - previous_obstacle)
+        previous_cost1 = np.linalg.norm(previous_end_eff - previous_obstacle)
+        previous_cost2 = np.sqrt(np.linalg.det(self.previous_jacobian.dot(self.previous_jacobian.T)))
+        previous_cost = (previous_cost1 + previous_cost2)
+         # Compute partial differentiation for cost function with respect to each q
+        derivative_wrt_q0 = (cost - previous_cost) / (dq0 +0.1)
+        derivative_wrt_q1 = (cost - previous_cost) / (dq1 + 0.1)
+        derivative_wrt_q2 = (cost - previous_cost) / (dq2 +0.1)
+        derivative_wrt_q3 = (cost - previous_cost) / (dq3 + 0.1)
 
-        # Compute partial differntiation for cost function with respect to each q
-        derivative_wrt_q0 = (cost - previous_cost) / dq0
-        derivative_wrt_q1 = (cost - previous_cost) / dq1
-        derivative_wrt_q2 = (cost - previous_cost) / dq2
-        derivative_wrt_q3 = (cost - previous_cost) / dq3
+        cost_derivative = np.array([derivative_wrt_q0,
+                                    derivative_wrt_q1,
+                                    derivative_wrt_q2,
+                                    derivative_wrt_q3])
 
-        # Group the calculations into a matrix
-        cost_derivative = np.array([derivative_wrt_q0, derivative_wrt_q1, derivative_wrt_q2, derivative_wrt_q3])
 
         # store the current values for next iteration
         self.previous_end_effector_position = end_effector
         self.previous_box_obstacle_position = box_obstacle
         self.previous_q = q
+        self.previous_jacobian = jacobian
 
         # Finally, calculate the secondary task. k0_constant tells us how fast or how slow we want to do t
         qdot_zero = k0_constant * cost_derivative.T
@@ -576,20 +586,22 @@ class controller:
 
     def task4_2(self, theta1, theta2, theta3, theta4, end_effector, target, box_obstacle):
         old_q = np.array([theta1, float(theta2), float(theta3), float(theta4)]).T
-        print("Oldq "+ str(old_q))
+        # print("Oldq "+ str(old_q))
         # Define Kp, Kd, and constant k (which is used for secondary task)
-        constant_k = 1  # Should be positive constant
+        constant_k = 0.001  # Should be positive constant
 
+        # Get psuedo_jacobian
+        k = 1
+        identity_matrix = np.eye(3)
+        jacobian = self.get_jacobian(theta1, theta2, theta3, theta4)
+        damped_J = jacobian.T.dot(np.linalg.inv(jacobian.dot(jacobian.T) + (k ** 2) * identity_matrix))
+        # pseudo_jacobian = self.get_inverse_jacobian(damped_J)
 
         # Get the change in time
         dt = self.calculate_delta_t()
+        secondary_task = self.compute_secondary_task(jacobian, end_effector, box_obstacle, old_q, constant_k)
 
-        secondary_task = self.compute_secondary_task(end_effector, box_obstacle, old_q, constant_k)
 
-        # Get psuedo_jacobian
-        jacobian = self.get_jacobian(theta1, theta2, theta3, theta4)
-        # jacobian = jacobian[:,1:4] #discard joint 1 since we fixed it
-        pseudo_jacobian = self.get_inverse_jacobian(jacobian)
 
         # derivative of error
         xy_d = target
@@ -601,15 +613,30 @@ class controller:
 
         # Calculate Null-space projection -has no effect on end effector, used for achieving our secondary task which is to stay away from box.
         identity_matrix = np.eye(4)
-        null_space_projection = (identity_matrix - pseudo_jacobian.dot(jacobian)).dot(secondary_task)
+
+        null_space_projection = (identity_matrix - damped_J.dot(jacobian)).dot(secondary_task)
 
         # qdot is joint velocity/joint angles derivative, calculate it using the null_space_projection
-        q_dot = pseudo_jacobian.dot((self.Kp.dot(error.transpose()) + self.Kd.dot(error_derivative.transpose()))) \
+        q_dot = damped_J.dot((self.Kp_4_2.dot(error.transpose()) + self.Kd_4_2.dot(error_derivative.transpose()))) \
                 + \
                 null_space_projection
 
         # Find the new joint angles using the q_dot we found
         new_q = old_q + dt * q_dot
+
+        # Our configuration space for theta2,theta3, and theta4 is between -pi/2 and pi/2
+        for i in range(0, 4):
+            angle = new_q[i]
+            if i == 0 and angle > np.pi:
+                angle = np.pi
+            if i ==0 and angle < -np.pi:
+                angle = -np.pi
+            if angle > np.pi / 2:
+                new_q[i] = np.pi / 2
+            if angle < -np.pi / 2:
+                new_q[i] = -np.pi / 2
+
+
 
         return new_q
 
@@ -649,36 +676,42 @@ class controller:
 
         actual_coordinate = fk_green(0.0, self.joint2_angle, self.joint3_angle)
 
-        fk = fk_matrix(self.q[0], self.q[1], self.q[2], self.q[3])
+        fk = fk_matrix(0, 0, 1, 0)
 
         blue_joint = np.array([[self.blue_3d[0]], [self.blue_3d[1]], [self.blue_3d[2]]])
         green_joint = np.array([[self.green_3d[0]], [self.green_3d[1]], [self.green_3d[2]]])
         actual_green = fk_green(0.0, self.joint2_angle, self.joint3_angle)
         red_joint = np.array([[self.red_3d[0]], [self.red_3d[1]], [self.red_3d[2]]])
-        print("Coordinate error: \n", green_joint-actual_green[0:3])
+        # print("Coordinate error: \n", green_joint-actual_green[0:3])
         
         #theta2, theta3, theta4, target = self.trajectory()
         #print(blue_joint.shape, green_joint.shape, red_joint.shape)
         theta2, theta3 = get_joint2_3_angles(green_joint, self.prev_theta2, self.prev_theta3)
-        print("Theta 3 error: \n", self.joint3_angle-theta3)
+        # print("Theta 3 error: \n", self.joint3_angle-theta3)
         self.prev_theta2 = theta2
         self.prev_theta3 = theta3
-        theta4 = get_joint4_angles(theta2, theta3, blue_joint, green_joint, red_joint)
+        # theta4 = get_joint4_angles(theta2, theta3, blue_joint, green_joint, red_joint)
 
         #####Task 3_2 + 4_2 ###
-        # new_q = self.task4_2(theta1=self.q[0], theta2=self.q[1], theta3=self.q[2], theta4=self.q[3],
-        #                      end_effector=self.red_3d,
-        #                      target=self.target_3d,
-        #                      box_obstacle=self.box_3d
-        #                      )
-        # print("NEW Q: ")
+        new_q = self.task4_2(theta1=self.q[0], theta2=self.q[1], theta3=self.q[2], theta4=self.q[3],
+                             end_effector=self.red_3d,
+                             target=self.target_3d,
+                             box_obstacle=self.box_3d
+                             )
+        print("NEW Q: ")
+        print(new_q)
+        self.q = new_q
+
+
+        # new_q = self.closed_loop_control(0,self.q[1],self.q[2],self.q[3],self.target_3d)
+        # self.q = new_q
+        # print("NEW Q")
         # print(new_q)
 
-        new_q = self.closed_loop_control(0,self.q[1],self.q[2],self.q[3],self.target_3d)
-        self.q = new_q
-        print("NEW Q")
-        print(new_q)
-
+        #task 2 angle 4 attempt
+        theta4 = - np.arctan2(self.red_3d[1],self.red_3d[2])  + theta2 - 2
+        print("ANGLES " + str(theta4 ))
+        # theta4 = np.pi/2 + theta4 - 0.4
         # ---------For publishing-------#
         ###task2_2
         target = Float64MultiArray()
@@ -703,9 +736,9 @@ class controller:
         # theta4 = get_joint4_angles(theta2, theta3, red_joint)
 
         try:
-            # self.joint2_t2.publish(theta2)
-            # self.joint3_t3.publish(theta3)
-            # self.joint4_t4.publish(theta4)
+            self.joint2_t2.publish(theta2)
+            self.joint3_t3.publish(theta3)
+            self.joint4_t4.publish(theta4)
             self.green_joint3dx.publish(self.green_3d[0])
             self.green_joint3dy.publish(self.green_3d[1])
             self.green_joint3dz.publish(self.green_3d[2])

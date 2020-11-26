@@ -60,10 +60,6 @@ class image_converter_1:
     self.previous_box_positions = np.array([0.0,0.0])
 
 
-    #Tesitng
-    self.counter =0
-    self.list_of_angles = []
-
   ##Code for task 4.1##
   def is_visible(self, m):
     return not(m==0)
@@ -99,7 +95,7 @@ class image_converter_1:
     # Detect Yellow Circle
     yellow_mask = cv2.inRange(hsv_image, (28, 10, 20), (35, 255, 255))
 
-    # cv2.imshow('Red Circle - Binary Image', red_mask)
+    #cv2.imshow('Red Circle - Binary Image', red_mask)
     #cv2.imshow('Blue Circle - Binary Image', blue_mask)
     #cv2.imshow('Green Circle - Binary Image', green_mask)
     #cv2.imshow('Yellow Circle - Binary Image', yellow_mask)
@@ -108,13 +104,12 @@ class image_converter_1:
     binary_images = {"Blue": blue_mask, "Green": green_mask, "Red": red_mask, "Yellow": yellow_mask}
     return binary_images
 
-
-
-
-  # Find center of a specific circle. The image returned from camera1 is of plane yz.
   # Find the outline of a binary image of a specific circle, and use minEnclosingCircle to predict the center of circle
   # that is partly hidden behind an object.
-  #These do not detect the orange target or box coordinates. Refer to other functions for those
+  # @color: to represent the color that was thresholded returned in the current mask. Used to determine if current
+  # circle of specific color is visible or not. For non-visible objects, we will simply return centers found previously.
+  # @returns: the center of the circle.
+  # NOTE: These do not detect the orange target or box coordinates.
   def predict_joint_center(self,color, mask):
     morph_kernel = np.ones((5, 5), np.uint8)
     opening_mask = cv2.morphologyEx(mask,cv2.MORPH_OPEN ,morph_kernel)
@@ -192,7 +187,7 @@ class image_converter_1:
 
   #If the target is not visible, return the center positions calculated previously
     if (not self.is_target_visible):
-      print("TARGET NOT VISIBLE")
+      # print("TARGET NOT VISIBLE")
       target_center= self.previous_target_positions
     else:
       contour_poly = cv2.approxPolyDP(curve=sphere_contour, epsilon=0.1, closed=True)
@@ -244,10 +239,6 @@ class image_converter_1:
     # cv2.waitKey(1)
 
 
-
-
-
-
   def update_target_positions(self,current_position):
     self.previous_target_positions = current_position
 
@@ -269,15 +260,11 @@ class image_converter_1:
 
     # Uncomment if you want to save the image
     # cv2.imwrite('image1_copy.png', self.cv_image1)
-    #self.get_joint_positions()
 
     cv2.imshow('window1', self.cv_image1)
     cv2.waitKey(1)
 
-    ##Task 2##
-
     masked_circles_image1 = self.detect_circles(self.cv_image1)
-
 
     yellow_center = self.predict_joint_center("Yellow", masked_circles_image1['Yellow'])
     blue_center= self.predict_joint_center("Blue", masked_circles_image1['Blue'])
@@ -299,24 +286,14 @@ class image_converter_1:
         self.update_circle_positions(color, red_center)
 
     target_center, box_center = self.predict_orange_centers(self.cv_image1)
-    #When the target can be detected from this camera, update  positions of our target
+    #When the target can be detected from this camera, update positions of our target
     if self.is_target_visible:
-      print("target visible")
+      # print("target visible")
       self.update_target_positions(target_center)
-        
-    if self.is_box_visible: 
+    if self.is_box_visible:
       self.update_box_positions(box_center)
 
-
-    # #####Testing
-    # point = [500,400]
-    # self.cv_image1[:,500] = [0,3,244]
-    # self.cv_image1[400,:] = [0,3,244]
-    # cv2.imshow("What is my life", self.cv_image1)
-
-
-    ######
-
+    # --- for publishing --- #
 
     self.y_center = Float64MultiArray()
     self.y_center.data = yellow_center
@@ -332,10 +309,8 @@ class image_converter_1:
     self.orange_box_center.data = box_center
 
 
-
     # update to current time
     self.time = rospy.get_time()
-    #print(self.time)
 
     self.joint2_angle = Float64()
     self.joint3_angle = Float64()

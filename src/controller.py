@@ -88,23 +88,6 @@ class controller:
         self.Kd_4_2 = np.array([[0.1, 0, 0], [0, 0.1, 0], [0, 0, 0.1]])
         self.previous_jacobian = np.ones((3,4)) # Initialise a jacobian the same dimension as the jacobian we calculated
 
-
-        if (g1_z > self.z_blue+self.error_margin and g2_z > self.z_blue+self.error_margin):
-            self.z_green = self.z_blue
-        else:
-            self.z_green = (g1_z + g2_z) / 2
-
-        # then check red
-        if (r1_z > self.z_yellow + self.error_margin and r2_z > self.z_yellow + self.error_margin):
-            self.z_red = self.z_blue
-        else:
-            self.z_red = (r1_z + r2_z) / 2
-
-        print(self.z_yellow, self.z_blue, self.z_green, self.z_red)
-
-     # From the coordinates recieved from the topics for both images, construct 3D coordinates (measured in pixels)
-     # Note: Image 2 - xz plane; Image 1 - yz plane.
-
     def create_new_3d_coordinates_from_data(self, y1, b1, g1, r1, y2, b2, g2, r2, target1, target2, box1, box2):
         #Collect the coordinates from each topic.
         self.yellow_center1 = (np.asarray(y1.data))

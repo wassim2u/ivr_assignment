@@ -9,56 +9,11 @@ import tensorflow as tf
 import os
 import sympy as sp
 from sympy import symbols, diff, sin, cos, Matrix, Eq, solveset, Interval
-from std_msgs.msg import String
-from sensor_msgs.msg import Image
-from std_msgs.msg import Float64MultiArray, Float64
-from cv_bridge import CvBridge, CvBridgeError
+#from std_msgs.msg import String
+#from sensor_msgs.msg import Image
+#from std_msgs.msg import Float64MultiArray, Float64
+#from cv_bridge import CvBridge, CvBridgeError
 import math
-
-#domain = Interval([-sp.pi-0.1, sp.pi+0.1])
-
-####DO WE NEED ANY OF THIS??????############
-"""
-def get_end_effector(cv_image):
-    lower_red = np.array([0,0,100])
-    upper_red = np.array([50,50,255])
-    cx_r, cy_r = get_joint_coordinates(cv_image, lower_red, upper_red)
-
-    return cx_r, cy_r
-
-def convert_pixel_to_metres(blue, yellow):
-
-  blue_1 = np.array([[blue[0]],[blue[2]]])
-  blue_2 = np.array([[blue[1]], [blue[2]]])
-  yellow_1 = np.array([[yellow[0]], [yellow[2]]])
-  yellow_2 = np.array([[yellow[1]], [yellow[2]]])
-
-  s1 = np.sum((blue_1-yellow_1)**2)
-  s2 = np.sum((blue_2-yellow_2)**2)
-
-  dist1 = np.sqrt(s1)
-  dist2 = np.sqrt(s2)
-  average_dist = (dist1+dist2)/2.0
-  return 2.5/average_dist
-
-def get_center(cv_image):
-  lower_yellow = np.array([0,100,100])
-  upper_yellow = np.array([50,255,255])
-  cx_y, cy_y = get_joint_coordinates(cv_image, lower_yellow, upper_yellow)
-  return cx_y, cy_y
-
-def get_joint_coordinates(cv_image, lower, upper):
-  im = threshold(cv_image, lower, upper)
-  M = cv2.moments(im)
-  cx = int(M['m10']/M['m00'])
-  cy = int(M['m01']/M['m00'])
-  return cx, cy
-
-def threshold(cv_image, lower_range, upper_range):
-    #create mask
-    mask = cv2.inRange(cv_image, lower_range, upper_range)
-    return mask
-"""
 
 def get_predictions(img):
     IMG_SIZE = 32 #Size changed to match Tensorflow model shape requirements
@@ -80,18 +35,6 @@ def get_predictions(img):
     output_data = np.squeeze(output_data)
     #Output
     return output_data
-
-####CAN WE DELETE THESE??????????
-"""
-def metres_to_pixels(metres, cv_image):
-  ratio = 1 /convert_pixel_to_metres(cv_image)
-  return ratio*metres
-
-def change_frame(y, z, center_y, center_z):
-  point = np.array([[0.], [y], [z], [1.]])
-  transformation = np.array([[1.,0.,0.,0.],[0., np.cos(np.pi), -np.sin(np.pi), -center_y*np.cos(np.pi)],[np.sin(np.pi), np.cos(np.pi), -center_y*np.sin(np.pi)-center_z*np.cos(np.pi)],[0.,0.,0.,1.]])
-  return np.dot(transformation, point)
-"""
 
 ####These functions define the frame transformations for forward kinematics######################################
 def a_0_1(theta1):
@@ -173,7 +116,7 @@ def a_3_4(theta4):
 
 ##################################################################################################################
 
-#Compue the entire homogeneous transformation matrix
+#Compute the entire homogeneous transformation matrix
 def fk_matrix(theta1, theta2, theta3, theta4):
   mtx_0_1 = a_0_1(theta1)
   mtx_1_2 = a_1_2(theta2)

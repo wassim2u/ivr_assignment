@@ -26,8 +26,6 @@ class image_converter_1:
     self.image_sub1 = rospy.Subscriber("/camera1/robot/image_raw",Image,self.callback1)
     # initialize the bridge between openCV and ROS
     self.bridge = CvBridge()
-    #initialize a publisher to move the joint1
-    self.joint1_pub = rospy.Publisher("/robot/joint1_position_controller/command", Float64, queue_size=10)
     #initialize a publisher to move the joint2
     self.joint2_pub = rospy.Publisher("/robot/joint2_position_controller/command", Float64, queue_size=10)
     #initialize a publisher to move the joint3
@@ -61,11 +59,6 @@ class image_converter_1:
     self.is_box_visible = True 
     self.previous_box_positions = np.array([0.0,0.0])
 
-
-  ##Code for task 4.1##
-  def is_visible(self, m):
-    return not(m==0)
-
     ###Functions to move joints 2-4 ###
   def move_joint2(self, t):
     return (np.pi/3)*np.sin((np.pi/15.0)*t)
@@ -96,11 +89,6 @@ class image_converter_1:
     green_mask = cv2.inRange(hsv_image, (35, 0, 0), (75, 255, 255))
     # Detect Yellow Circle
     yellow_mask = cv2.inRange(hsv_image, (28, 10, 20), (35, 255, 255))
-    # cv2.imshow('Red Circle - Binary Image', red_mask)
-    #cv2.imshow('Blue Circle - Binary Image', blue_mask)
-    #cv2.imshow('Green Circle - Binary Image', green_mask)
-    #cv2.imshow('Yellow Circle - Binary Image', yellow_mask)
-    # cv2.waitKey(1)
 
     binary_images = {"Blue": blue_mask, "Green": green_mask, "Red": red_mask, "Yellow": yellow_mask}
     return binary_images
@@ -211,9 +199,7 @@ class image_converter_1:
       # Box center would be located half the width and height
       box_center = [topleft_x + (width / 2), topleft_y + (height / 2)]
 
-
     return target_center, box_center
-
 
   # Draws the shape on the image. Call when needed for visualisation.
   def draw_boundary(self, img, mask):
@@ -251,7 +237,6 @@ class image_converter_1:
 
   def update_circle_positions(self,color, positions):
     self.previous_circle_positions[color] = positions
-
 
   # Recieve data from camera 1, process it, and publish
   def callback1(self,data):
@@ -311,9 +296,6 @@ class image_converter_1:
     self.orange_box_center = Float64MultiArray()
     self.orange_box_center.data = box_center
 
-    # update to current time
-    self.time = rospy.get_time()
-
     self.joint2_angle = Float64()
     self.joint3_angle = Float64()
     self.joint4_angle = Float64()
@@ -321,11 +303,12 @@ class image_converter_1:
     # Publish the results
     try:
       self.image_pub1.publish(self.bridge.cv2_to_imgmsg(self.cv_image1, "bgr8"))
+
       #publish new joint angles
-      #self.joint1_pub.publish(0.39)
-      self.joint2_pub.publish(self.joint2_angle)
-      self.joint3_pub.publish(self.joint3_angle)
-      self.joint4_pub.publish(self.joint4_angle)
+      #self.joint2_pub.publish(self.joint2_angle)
+      #self.joint3_pub.publish(self.joint3_angle)
+      #self.joint4_pub.publish(self.joint4_angle)
+
       #publish joint centers with coordinates (y,z) taken from image 1
       self.joint_centers_yellow_pub1.publish(self.y_center)
       self.joint_centers_blue_pub1.publish(self.b_center)
@@ -333,7 +316,6 @@ class image_converter_1:
       self.joint_centers_red_pub1.publish(self.r_center)
       self.target_center_pub1.publish(self.target_sphere_center)
       self.box_center_pub1.publish(self.orange_box_center)
-
 
     except CvBridgeError as e:
       print(e)

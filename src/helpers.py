@@ -9,10 +9,6 @@ import tensorflow as tf
 import os
 import sympy as sp
 from sympy import symbols, diff, sin, cos, Matrix, Eq, solveset, Interval
-#from std_msgs.msg import String
-#from sensor_msgs.msg import Image
-#from std_msgs.msg import Float64MultiArray, Float64
-#from cv_bridge import CvBridge, CvBridgeError
 import math
 
 def get_predictions(img):
@@ -159,3 +155,4 @@ def get_joint4_angles(theta2, green_joint, end_effector):
   theta4 = -np.arctan2(end_effector[:,1]-green_joint[:,1], end_effector[:,2]-green_joint[:,2])-theta2-0.25 
   return theta4
 ####################################################################################################################
+

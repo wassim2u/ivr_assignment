@@ -26,6 +26,8 @@ class image_converter_1:
     self.image_sub1 = rospy.Subscriber("/camera1/robot/image_raw",Image,self.callback1)
     # initialize the bridge between openCV and ROS
     self.bridge = CvBridge()
+    #initialize a publisher to move the joint1
+    self.joint1_pub = rospy.Publisher("/robot/joint1_position_controller/command", Float64, queue_size=10)
     #initialize a publisher to move the joint2
     self.joint2_pub = rospy.Publisher("/robot/joint2_position_controller/command", Float64, queue_size=10)
     #initialize a publisher to move the joint3
@@ -100,10 +102,10 @@ class image_converter_1:
   # @returns: the center of the circle.
   # NOTE: These do not detect the orange target or box coordinates.
   def predict_joint_center(self,color, mask):
-    kernel = np.ones((3, 3), np.uint8)
-    dilated_mask = cv2.dilate(mask, kernel, iterations=4)
+    morph_kernel = np.ones((5, 5), np.uint8)
+    opening_mask = cv2.morphologyEx(mask,cv2.MORPH_OPEN ,morph_kernel)
     #check whether circle is visible by checking its area:
-    M = cv2.moments(dilated_mask)
+    M = cv2.moments(opening_mask)
     area = M['m00']
     #If the circle is completely hidden, return the previous value
     if (area<0.01):

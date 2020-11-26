@@ -66,11 +66,15 @@ class image_converter_2:
 
   # Find the outline of a binary image of a specific circle, and use minEnclosingCircle to predict the center of circle
   # that is partly hidden behind an object.
-  def predict_circle_center2(self, color, mask):
-    kernel = np.ones((3, 3), np.uint8)
-    dilated_mask = cv2.dilate(mask, kernel, iterations=4)
+  # @color: to represent the color that was thresholded returned in the current mask. Used to determine if current
+  # circle of specific color is visible or not. For non-visible objects, we will simply return centers found previously.
+  # @returns: the center of the circle.
+  # NOTE: These do not detect the orange target or box coordinates.
+  def predict_joint_center2(self, color, mask):
+    morph_kernel = np.ones((5, 5), np.uint8)
+    opening_mask = cv2.morphologyEx(mask,cv2.MORPH_OPEN ,morph_kernel)
     #check whether circle is visible by checking its area:
-    M = cv2.moments(dilated_mask)
+    M = cv2.moments(opening_mask)
     area = M['m00']
     # If the circle is completely hidden, return the previous value
     if (area < 0.01):
@@ -80,7 +84,7 @@ class image_converter_2:
       self.is_circle_visible[color] = True
 
     #Find outline of the shape of the masked circle
-    contours, hierarchy = cv2.findContours(dilated_mask, 1, 2)
+    contours, hierarchy = cv2.findContours(opening_mask, 1, 2)
     contour_poly = cv2.approxPolyDP(curve=contours[0], epsilon=0.1, closed=True)
     #Using the outline, draw a circle that encloses the shape of the contour found
     center, radius = cv2.minEnclosingCircle(contour_poly)

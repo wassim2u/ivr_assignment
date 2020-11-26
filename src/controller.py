@@ -49,6 +49,10 @@ class controller:
         self.end_effector_FK_pub = rospy.Publisher("task3_1/end_effector_position/FK", Float64MultiArray, queue_size=10)
         self.end_effector_vision_pub = rospy.Publisher("task3_2/end_effector_position/vision", Float64MultiArray, queue_size=10)
 
+        self.prev_theta2 = 0.0
+        self.prev_theta3 = 0.0
+        self.prev_theta4 = 0.0
+
         # initialize a publisher to move the joint1
         self.joint1_pub = rospy.Publisher("/robot/joint1_position_controller/command", Float64, queue_size=10)
         # initialize a publisher to move the joint2
@@ -88,6 +92,8 @@ class controller:
         self.Kd_4_2 = np.array([[0.1, 0, 0], [0, 0.1, 0], [0, 0, 0.1]])
         self.previous_jacobian = np.ones((3,4)) # Initialise a jacobian the same dimension as the jacobian we calculated
 
+     # From the coordinates recieved from the topics for both images, construct 3D coordinates (measured in pixels)
+     # Note: Image 2 - xz plane; Image 1 - yz plane.
     def create_new_3d_coordinates_from_data(self, y1, b1, g1, r1, y2, b2, g2, r2, target1, target2, box1, box2):
         #Collect the coordinates from each topic.
         self.yellow_center1 = (np.asarray(y1.data))
@@ -109,7 +115,6 @@ class controller:
         self.blue_center2[0] = self.yellow_center2[0]
 
         #Take the averages of the z from both images.
-
         z_center = (self.yellow_center1[1] + self.yellow_center2[1]) / 2
         z_blue = (self.blue_center1[1] + self.blue_center2[1]) / 2
         z_green = (self.green_center1[1] + self.green_center2[1]) / 2
@@ -194,7 +199,6 @@ class controller:
 
         # Get psuedo_jacobian
         jacobian = self.get_jacobian(theta1, theta2, theta3, theta4)
-        # jacobian = jacobian[1:4,:] #discard joint 1 since we fixed it
         j_inv = self.get_inverse_jacobian(jacobian)
         print(j_inv)
         # calculate angular velocity of the joints
@@ -314,54 +318,6 @@ class controller:
                 q_d[i] = -np.pi / 2
 
         return q_d
-
-    # Get the change in time
-    def calculate_delta_t(self):
-        # estimate delta T
-        current_time = rospy.get_time()
-        dt = current_time - self.prev_time  # delta T
-        self.prev_time = current_time
-        return dt
-
-    # Differentiate cost with respect to q, given cost function.
-    def compute_secondary_task(self, jacobian, end_effector, box_obstacle, q, k0_constant):
-        q0, q1, q2, q3 = q[0], q[1], q[2], q[3]
-        dq0 = q0 - self.previous_q[0]
-        dq1 = q1 - self.previous_q[1]
-        dq2 = q2 - self.previous_q[2]
-        dq3 = q3 - self.previous_q[3]
-
-
-        # Cost function is distance between end effector and box squared.
-        # Maximise two secondary tasks , i) maximise the distance, to avoid  the box ii) Avoid singularity
-        cost1 = np.linalg.norm(end_effector - box_obstacle)
-        cost2 = np.sqrt(np.linalg.det(jacobian.dot(jacobian.T)))
-        cost = (cost1+ cost2)
-        previous_end_eff = self.previous_end_effector_position
-        previous_obstacle = self.previous_box_obstacle_position
-        previous_cost1 = np.linalg.norm(previous_end_eff - previous_obstacle)
-        previous_cost2 = np.sqrt(np.linalg.det(self.previous_jacobian.dot(self.previous_jacobian.T)))
-        previous_cost = (previous_cost1 + previous_cost2)
-         # Compute partial differentiation for cost function with respect to each q
-        derivative_wrt_q0 = (cost - previous_cost) / (dq0 +0.1)
-        derivative_wrt_q1 = (cost - previous_cost) / (dq1 + 0.1)
-        derivative_wrt_q2 = (cost - previous_cost) / (dq2 +0.1)
-        derivative_wrt_q3 = (cost - previous_cost) / (dq3 + 0.1)
-
-        cost_derivative = np.array([derivative_wrt_q0,
-                                    derivative_wrt_q1,
-                                    derivative_wrt_q2,
-                                    derivative_wrt_q3])
-
-
-        # store the current values for next iteration
-        self.previous_end_effector_position = end_effector
-        self.previous_box_obstacle_position = box_obstacle
-        self.previous_q = q
-        self.previous_jacobian = jacobian
-
-        # Finally, calculate the secondary task. k0_constant tells us how fast or how slow we want to do t
-        qdot_zero = k0_constant * cost_derivative.T
 
     #Task 4_2:
     #Returns joint angles that will enable the controller to avoid hitting the box using the redundacy of robot

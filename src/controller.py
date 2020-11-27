@@ -432,7 +432,7 @@ class controller:
         red_joint = np.array([[self.red_3d[0]], [self.red_3d[1]], [self.red_3d[2]]])
 
 
-        theta2 = get_joint3_angles(green_joint)
+        theta3 = get_joint3_angles(green_joint)
         theta2 = get_joint2_angles(blue_joint, green_joint)
         theta4 = get_joint4_angles(theta2, green_joint.T, red_joint.T)
 

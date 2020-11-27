@@ -90,16 +90,16 @@ class controller:
         self.prev_time = rospy.get_time()
         self.error = np.array([0.0, 0.0, 0.0], dtype='float64')
         self.error_d = np.array([0.0, 0.0, 0.0], dtype='float64')
-        self.Kp = np.array([[4.8, 0, 0], [0, 4.8, 0], [0, 0,  4.9]])
-        self.Kd = np.array([[0.5, 0, 0], [0, 0.5, 0], [0, 0, 0.5]])
+        self.Kp = np.array([[0.4, 0, 0], [0, 0.4, 0], [0, 0,  0.4]])
+        self.Kd = np.array([[0.4, 0, 0], [0, 0.4, 0], [0, 0, 0.4]])
 
 
         # task4_2
         self.previous_q = np.array([0.0, 0.0, 0.0, 0.0])
         self.previous_end_effector_position = np.array([0.0, 0.0, 0.0])
         self.previous_box_obstacle_position = np.array([0.0, 0.0, 0.0])
-        self.Kp_4_2 = np.array([[2.8, 0, 0], [0, 2.8, 0], [0, 0, 2.8]])
-        self.Kd_4_2 = np.array([[0.2, 0, 0], [0, 0.2, 0], [0, 0, 0.2]])
+        self.Kp_4_2 = np.array([[0.8, 0, 0], [0, 0.8, 0], [0, 0, 0.8]])
+        self.Kd_4_2 = np.array([[0.3, 0, 0], [0, 0.3, 0], [0, 0, 0.3]])
         self.previous_error_derivative = np.array([0.0, 0.0, 0.0])
         self.previous_jacobian = np.ones((3,4)) # Initialise a matrix the same dimension as the jacobian we calculated
 

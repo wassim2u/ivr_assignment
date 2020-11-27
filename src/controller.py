@@ -98,8 +98,8 @@ class controller:
         self.previous_q = np.array([0.0, 0.0, 0.0, 0.0])
         self.previous_end_effector_position = np.array([0.0, 0.0, 0.0])
         self.previous_box_obstacle_position = np.array([0.0, 0.0, 0.0])
-        self.Kp_4_2 = np.array([[0.6, 0, 0], [0, 0.6, 0], [0, 0, 0.6]])
-        self.Kd_4_2 = np.array([[0.1, 0, 0], [0, 0.1, 0], [0, 0, 0.1]])
+        self.Kp_4_2 = np.array([[0.8, 0, 0], [0, 0.8, 0], [0, 0, 0.8]])
+        self.Kd_4_2 = np.array([[0.3, 0, 0], [0, 0.3, 0], [0, 0, 0.3]])
         self.previous_error_derivative = np.array([0.0, 0.0, 0.0])
         self.previous_jacobian = np.ones((3,4)) # Initialise a matrix the same dimension as the jacobian we calculated
 

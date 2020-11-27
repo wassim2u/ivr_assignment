@@ -4,9 +4,10 @@
 Sympy and Tensorflow (version 2.3.1) are additional packages that we installed for our projects, with the former allowing us to compute symbolic mathematics and the latter used for target detection.
 Other packages installed include numpy and OpenCV.
 
+# --Needs to change
 To install the modules used in this project, use: 
 pip freeze -r requirements.txt
-
+# --Needs to change
 
 ## File Descriptions
 image1.py and image2.py handle the image processing part of the project, mainly target detection (Task 2.2) and pinpointing the center of our object.

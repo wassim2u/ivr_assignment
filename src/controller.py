@@ -43,11 +43,23 @@ class controller:
         self.joint2_t2 = rospy.Publisher("/robot/theta2", Float64, queue_size=10)
         self.joint3_t3 = rospy.Publisher("/robot/theta3", Float64, queue_size=10)
         self.joint4_t4 = rospy.Publisher("/robot/theta4", Float64, queue_size=10)
-        self.target_3d_pub = rospy.Publisher("task2_2/target_3d", Float64MultiArray, queue_size=10)
 
-        self.prev_theta2 = 0.0
-        self.prev_theta3 = 0.0
-        self.prev_theta4 = 0.0
+        #initialise publisher for sphere target coordinates
+        self.target_3d_x_pub = rospy.Publisher("results/target_3d/x", Float64, queue_size=10)
+        self.target_3d_y_pub = rospy.Publisher("results/target_3d/y", Float64, queue_size=10)
+        self.target_3d_z_pub = rospy.Publisher("results/target_3d/z", Float64, queue_size=10)
+
+        #initialise publisher for box coordinates
+        self.box_3d_x_pub = rospy.Publisher("results/box_3d/x", Float64, queue_size=10)
+        self.box_3d_y_pub = rospy.Publisher("results/box_3d/y", Float64, queue_size=10)
+        self.box_3d_z_pub = rospy.Publisher("results/box_3d/z", Float64, queue_size=10)
+
+        #initialise publisher for end effector positions
+        self.end_effector_x_pub = rospy.Publisher("results/end_effector/x", Float64, queue_size=10)
+        self.end_effector_y_pub = rospy.Publisher("results/end_effector/y", Float64, queue_size=10)
+        self.end_effector_z_pub = rospy.Publisher("results/end_effector/z", Float64, queue_size=10)
+
+
 
         # initialize a publisher to move the joint1
         self.joint1_pub = rospy.Publisher("/robot/joint1_position_controller/command", Float64, queue_size=10)
@@ -58,9 +70,9 @@ class controller:
         # initialize a publisher to move the joint4
         self.joint4_pub = rospy.Publisher("/robot/joint4_position_controller/command", Float64, queue_size=10)
 
-        # Initial angles for closed loop control
+        # Initial angles for closed loop control - task_3_2
         self.q_task3_2 = np.array([0.0,0.0,0.0,0.0])
-        # Initial angles for null space control
+        # Initial angles for null space control - task_4_2
         self.q_task4_2 = np.array([0.0,0.0,0.0,0.0])
 
         # synchronise incoming channels using the timestamps contained in their headers
@@ -75,7 +87,6 @@ class controller:
 
         #task 3_2
         # set error margin for readings
-        self.error_margin = 0.0
         self.prev_time = rospy.get_time()
         self.error = np.array([0.0, 0.0, 0.0], dtype='float64')
         self.error_d = np.array([0.0, 0.0, 0.0], dtype='float64')
@@ -89,6 +100,7 @@ class controller:
         self.previous_box_obstacle_position = np.array([0.0, 0.0, 0.0])
         self.Kp_4_2 = np.array([[0.6, 0, 0], [0, 0.6, 0], [0, 0, 0.6]])
         self.Kd_4_2 = np.array([[0.1, 0, 0], [0, 0.1, 0], [0, 0, 0.1]])
+        self.previous_error_derivative = np.array([0.0, 0.0, 0.0])
         self.previous_jacobian = np.ones((3,4)) # Initialise a matrix the same dimension as the jacobian we calculated
 
      # From the coordinates recieved from the topics for both images, construct 3D coordinates (measured in pixels)
@@ -232,7 +244,9 @@ class controller:
         pos_d = target
 
         # estimate derivative of error
-        self.error_d = ((pos_d - current_position) - self.error) / dt
+        #If the change in time is very minimal, use the previous error derivative
+        if dt > 0.0001:
+            self.error_d = ((pos_d - current_position) - self.error) / dt
 
         # estimate error
         self.error = pos_d - current_position
@@ -280,8 +294,14 @@ class controller:
         xy_d = target
         xy_e = end_effector
         error = xy_d - xy_e
-        error_derivative = (error - self.error) / dt
+        # If the change in time is very minimal, use the previous error_derivative
+        error_derivative = 0.0
+        if dt < 0.0001:
+            error_derivative = self.previous_error_derivative
+        else:
+            error_derivative = (error - self.error) / dt
         self.error = error  # Update error
+        self.previous_error_derivative = error_derivative #Update the derivative
 
 
         # Calculate Null-space projection - has no effect on end effector, used for achieving our secondary task which is to stay away from box.
@@ -403,11 +423,26 @@ class controller:
             self.joint4_t4.publish(theta4)
             # Task 2_2  - Publishes the coordinates of the sphere target's center to the topic defined.
             self.target_3d_pub.publish(target)
-            #Task 3_2 / Task 4_2 - Publishes the new angles computed to the robot to follow the target
+            #Task 3_2 / Task 4_2
+            # - Publishes the new angles computed to the robot to follow the target
             self.joint1_pub.publish(new_q[0])
             self.joint2_pub.publish(new_q[1])
             self.joint3_pub.publish(new_q[2])
             self.joint4_pub.publish(new_q[3])
+            # - Publishes the coordinates found for end effector, target, and box
+            self.target_3d_x_pub.publish(self.target_3d[0])
+            self.target_3d_y_pub.publish(self.target_3d[1])
+            self.target_3d_z_pub.publish(self.target_3d[2])
+            
+            self.box_3d_x_pub.publish(self.box_3d[0])
+            self.box_3d_y_pub.publish(self.box_3d[1])
+            self.box_3d_z_pub.publish(self.box_3d[2])
+
+            self.end_effector_x_pub.publish(self.red_3d[0])
+            self.end_effector_y_pub.publish(self.red_3d[1])
+            self.end_effector_z_pub.publish(self.red_3d[2])
+
+
 
         except CvBridgeError as e:
             print(e)

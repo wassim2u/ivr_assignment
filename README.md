@@ -1,5 +1,9 @@
 # IVR_Assignment - Annabel Jakob and Wassim Jabrane
 
+
+**When you clone the repository, please make sure that you rename the folder ivr_assignment-main to ivr_assignment. Otherwise, the code won't run because the model uses the path ivr_assignment. We were unsure of how to remane the repo when it clones it.**
+
+
 ## Packages Installed 
 Sympy and Tensorflow (version 2.3.1, currently works with python of version 3.7) are additional packages that we installed for our projects, with the former allowing us to compute symbolic mathematics and the latter used for target detection.
 Other packages installed include numpy and OpenCV.

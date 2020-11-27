@@ -44,10 +44,6 @@ class controller:
         self.joint3_t3 = rospy.Publisher("/robot/theta3", Float64, queue_size=10)
         self.joint4_t4 = rospy.Publisher("/robot/theta4", Float64, queue_size=10)
         self.target_3d_pub = rospy.Publisher("task2_2/target_3d", Float64MultiArray, queue_size=10)
-        #Initialise publishers to be used for plotting to visualise
-        #the comparison of end effector positions of FK vs vision
-        self.end_effector_FK_pub = rospy.Publisher("task3_1/end_effector_position/FK", Float64MultiArray, queue_size=10)
-        self.end_effector_vision_pub = rospy.Publisher("task3_2/end_effector_position/vision", Float64MultiArray, queue_size=10)
 
         self.prev_theta2 = 0.0
         self.prev_theta3 = 0.0
@@ -62,7 +58,10 @@ class controller:
         # initialize a publisher to move the joint4
         self.joint4_pub = rospy.Publisher("/robot/joint4_position_controller/command", Float64, queue_size=10)
 
-        self.q = np.array([1.0,1.0,1.0,1.0])
+        # Initial angles for closed loop control
+        self.q_task3_2 = np.array([0.0,0.0,0.0,0.0])
+        # Initial angles for null space control
+        self.q_task4_2 = np.array([0.0,0.0,0.0,0.0])
 
         # synchronise incoming channels using the timestamps contained in their headers
         # slop defines the delay in seconds with which messages are synchronized
@@ -90,7 +89,7 @@ class controller:
         self.previous_box_obstacle_position = np.array([0.0, 0.0, 0.0])
         self.Kp_4_2 = np.array([[0.6, 0, 0], [0, 0.6, 0], [0, 0, 0.6]])
         self.Kd_4_2 = np.array([[0.1, 0, 0], [0, 0.1, 0], [0, 0, 0.1]])
-        self.previous_jacobian = np.ones((3,4)) # Initialise a jacobian the same dimension as the jacobian we calculated
+        self.previous_jacobian = np.ones((3,4)) # Initialise a matrix the same dimension as the jacobian we calculated
 
      # From the coordinates recieved from the topics for both images, construct 3D coordinates (measured in pixels)
      # Note: Image 2 - xz plane; Image 1 - yz plane.
@@ -171,49 +170,13 @@ class controller:
         self.red_3d[1] = - self.red_3d[1]
         self.target_3d[1] = - self.target_3d[1]
         self.box_3d[1] = -self.box_3d[1]
-
-        print("Values changed to meters:")
-        print("Yellow " + str(self.yellow_3d))
-        print("Blue:" + str(self.blue_3d))
-        print("Green" + str(self.green_3d))
-        print("Red" + str(self.red_3d))
-
-    def closed_loop_control(self, theta1, theta2, theta3, theta4, target):
-        q =  np.array([theta1,theta2,theta3,theta4])
-        #Get change in time
-        current_time = rospy.get_time()
-        dt = current_time - self.prev_time
-        self.prev_time = current_time
-
-        fk = fk_matrix(0.0, theta2, theta3, theta4)
-        current_position = fk
-        print(current_position)
-        pos_d = target
+        # print("Values changed to meters:")
+        # print("Yellow " + str(self.yellow_3d))
+        # print("Blue:" + str(self.blue_3d))
+        # print("Green" + str(self.green_3d))
+        # print("Red" + str(self.red_3d))
 
 
-        # estimate derivative of error
-        self.error_d = ((pos_d - current_position) - self.error) / dt
-
-        # estimate error
-        self.error = pos_d - current_position
-
-        # Get psuedo_jacobian
-        jacobian = self.get_jacobian(theta1, theta2, theta3, theta4)
-        j_inv = self.get_inverse_jacobian(jacobian)
-        print(j_inv)
-        # calculate angular velocity of the joints
-        dq_d = np.dot(j_inv, (np.dot(self.Kd, self.error_d.transpose()) + np.dot(self.Kp, self.error.T)))
-        q_d = q + (dt * dq_d)
-        #Our configuration space for theta2,theta3, and theta4 is between -pi/2 and pi/2
-        for i in range(1,4):
-            angle = q_d[i]
-            if angle > np.pi/2:
-                q_d[i] = np.pi/2
-            if angle < -np.pi/2:
-                q_d[i] = -np.pi/2
-
-
-        return q_d
 
     def get_jacobian(self, theta1, theta2, theta3, theta4):
         a, b, c, d = symbols('a b c d')
@@ -243,29 +206,16 @@ class controller:
         j_33 = diff(zz, c)
         j_34 = diff(zz, d)
 
+
         # Now make it a proper matrix substituting the actual angles
         jacobian = Matrix([
-            [j_11.subs(a, theta1).subs(b, theta2).subs(c, theta3).subs(d, theta4),
-             j_12.subs(a, theta1).subs(b, theta2).subs(c, theta3).subs(d, theta4),
-             j_13.subs(a, theta1).subs(b, theta2).subs(c, theta3).subs(d, theta4),
-             j_14.subs(a, theta1).subs(b, theta2).subs(c, theta3).subs(d, theta4),
-             ],
-
-            [j_21.subs(a, theta1).subs(b, theta2).subs(c, theta3).subs(d, theta4),
-             j_22.subs(a, theta1).subs(b, theta2).subs(c, theta3).subs(d, theta4),
-             j_23.subs(a, theta1).subs(b, theta2).subs(c, theta3).subs(d, theta4),
-             j_24.subs(a, theta1).subs(b, theta2).subs(c, theta3).subs(d, theta4),
-            ],
-
-            [j_31.subs(a, theta1).subs(b, theta2).subs(c, theta3).subs(d, theta4),
-             j_32.subs(a, theta1).subs(b, theta2).subs(c, theta3).subs(d, theta4),
-             j_33.subs(a, theta1).subs(b, theta2).subs(c, theta3).subs(d, theta4),
-             j_34.subs(a, theta1).subs(b, theta2).subs(c, theta3).subs(d, theta4)
-            ]
-
+            [j_11, j_12, j_13, j_14],
+            [j_21, j_22, j_23, j_24],
+            [j_31, j_32, j_33, j_34],
         ])
+
+        jacobian = jacobian.subs(a, theta1).subs(b, theta2).subs(c, theta3).subs(d, theta4)
         jacobian = np.array(jacobian).astype(np.float64)
-        # jacobian = np.empty((3,4))
         return jacobian
 
     def get_inverse_jacobian(self, j):
@@ -289,6 +239,7 @@ class controller:
 
         #Get the end effector positions from the fk_matrix function that returns them.
         fk = fk_matrix(0.0, theta2, theta3, theta4)
+
         current_position = fk
 
         #Denote the desired position as target
@@ -319,6 +270,7 @@ class controller:
 
         return q_d
 
+
     #Task 4_2:
     #Returns joint angles that will enable the controller to avoid hitting the box using the redundacy of robot
     #while following the target. It is also closed-loop as it uses image feedback of end effector position.
@@ -337,7 +289,6 @@ class controller:
         dt = self.calculate_delta_t()
         #compute secondary task
         secondary_task = self.compute_secondary_task_4_2(end_effector, box_obstacle, old_q)
-
 
         # derivative of error
         xy_d = target
@@ -373,12 +324,10 @@ class controller:
                 new_q[i] = -np.pi / 2
 
 
-
         return new_q
 
-    # Differentiate cost with respect to q, given cost function,
-    # which will be the distance between end effector and box.
-    # The secondary task is to maximise this distance to avoid the box.
+    #Differentiate cost with respect to q, given cost function, which will be the distance between end effector and box.
+    #The secondary task is to maximise this distance to avoid the box.
     def compute_secondary_task_4_2(self, end_effector, box_obstacle, q):
         # define k0 constant , which signifies how fast we want to move in the derivative direction
         k0_constant = 0.001
@@ -426,7 +375,8 @@ class controller:
         # Get coordinates from the two images and change the values to make them with respect to yellow center in meters
         self.create_new_3d_coordinates_from_data(y1, b1, g1, r1, y2, b2, g2, r2, target1, target2, box1, box2)
         self.changeAxis()
-    
+
+        # ---- Task 2_1 ---- #
         green_joint = np.array([[self.green_3d[0]], [self.green_3d[1]], [self.green_3d[2]]])
         blue_joint = np.array([[self.blue_3d[0]], [self.blue_3d[1]], [self.blue_3d[2]]])
         red_joint = np.array([[self.red_3d[0]], [self.red_3d[1]], [self.red_3d[2]]])
@@ -436,49 +386,37 @@ class controller:
         theta2 = get_joint2_angles(blue_joint, green_joint)
         theta4 = get_joint4_angles(theta2, green_joint.T, red_joint.T)
 
-        # ---- Task 3_2 ---- #
-        new_q = self.closed_loop_control(theta1=0,
-                                         theta2 = self.q[1],
-                                         theta3 = self.q[2],
-                                         theta4 = self.q[3],
-                                         target= self.target_3d)
-        self.q = new_q
-
-
-        # # ---- Task 4_2 ---- #
-        # new_q = self.null_space_control(theta1=self.q[0], theta2=self.q[1], theta3=self.q[2], theta4=self.q[3],
-        #                      end_effector=self.red_3d,
-        #                      target=self.target_3d,
-        #                      box_obstacle=self.box_3d
-        #                      )
-        # print("NEW Q: ")
-        # print(new_q)
-        # self.q = new_q
-
-        # ---------For publishing-------#
-        ###task2_2
+        # -----Task 2_2 -------#
         target = Float64MultiArray()
         target.data = self.target_3d
-        ###task3_1
 
-        end_effector_FK = Float64MultiArray()
-        end_effector_FK.data = fk
-        print( "FK NEW"+ str(end_effector_FK.data))
-        end_effector_vision = Float64MultiArray()
-        print("VISION" + str(self.red_3d))
-        end_effector_vision.data = self.red_3d
+        # ---- Task 3_2 ---- #
+        # new_q = self.closed_loop_control(theta1=0,
+        #                                  theta2=self.q_task3_2[1],
+        #                                  theta3=self.q_task3_2[2],
+        #                                  theta4=self.q_task3_2[3],
+        #                                  target=self.target_3d)
+        # self.q = new_q
+
+
+        # ---- Task 4_2 ---- #
+        new_q = self.null_space_control(theta1=self.q_task4_2[0], theta2=self.q_task4_2[1], theta3=self.q_task4_2[2],
+                                        theta4=self.q_task4_2[3],
+                             end_effector=self.red_3d,
+                             target=self.target_3d,
+                             box_obstacle=self.box_3d
+                             )
+        self.q_task4_2 = new_q
+
+
 
         try:
             # Task 2_1 - Publish estimated joint angles
             self.joint2_t2.publish(theta2)
             self.joint3_t3.publish(theta3)
             self.joint4_t4.publish(theta4)
-
             # Task 2_2  - Publishes the coordinates of the sphere target's center to the topic defined.
             self.target_3d_pub.publish(target)
-            # Task 3_1 - Publishes the coordinates of the end effector found through vision and through the FK equation.
-            self.end_effector_FK_pub.publish(end_effector_FK)
-            self.end_effector_vision_pub.publish(end_effector_vision)
             #Task 3_2 / Task 4_2 - Publishes the new angles computed to the robot to follow the target
             self.joint1_pub.publish(new_q[0])
             self.joint2_pub.publish(new_q[1])

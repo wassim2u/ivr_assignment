@@ -26,8 +26,6 @@ class image_converter_1:
     self.image_sub1 = rospy.Subscriber("/camera1/robot/image_raw",Image,self.callback1)
     # initialize the bridge between openCV and ROS
     self.bridge = CvBridge()
-    #initialize a publisher to move the joint1
-    self.joint1_pub = rospy.Publisher("/robot/joint1_position_controller/command", Float64, queue_size=10)
     #initialize a publisher to move the joint2
     self.joint2_pub = rospy.Publisher("/robot/joint2_position_controller/command", Float64, queue_size=10)
     #initialize a publisher to move the joint3
@@ -63,13 +61,13 @@ class image_converter_1:
 
     ###Functions to move joints 2-4 ###
   def move_joint2(self, t):
-    return (np.pi/3)*np.sin((np.pi/15.0)*t)
+    return (np.pi/2)*np.sin((np.pi/15.0)*t)
 
   def move_joint3(self, t):
-    return (np.pi/3)*np.sin((np.pi/18.0)*t)
+    return (np.pi/2)*np.sin((np.pi/18.0)*t)
 
   def move_joint4(self, t):
-    return (np.pi/3)*np.sin((np.pi/20.0)*t)
+    return (np.pi/2)*np.sin((np.pi/20.0)*t)
 
   def compute_joint_angles(self):
       time = rospy.get_time()
@@ -113,15 +111,11 @@ class image_converter_1:
       return self.previous_circle_positions[color]
     else:
       self.is_circle_visible[color] = True
-      cy = int(M["m10"] / M["m00"])
-      cz = int(M["m01"] / M["m00"])
-      return np.array([cy, cz])
-    cv2.imshow("Circle", opening_mask)
     #Find outline of the shape of the masked circle
     contours, hierarchy = cv2.findContours(opening_mask, 1, 2)
     contour_poly = cv2.approxPolyDP(curve=contours[0], epsilon=0.1, closed=True)
     #Using the outline, draw a circle that encloses the shape of the contour found
-    center, radius = cv2.minEnclosingCircle(contour_poly)
+    center, radius = cv2.minEnclosingCircle(contours[0])
 
     return np.array([int(center[0]), int(center[1])])
 
@@ -284,7 +278,6 @@ class image_converter_1:
       self.update_box_positions(box_center)
 
     # --- for publishing --- #
-
     self.y_center = Float64MultiArray()
     self.y_center.data = yellow_center
     self.b_center = Float64MultiArray()
@@ -307,10 +300,9 @@ class image_converter_1:
       self.image_pub1.publish(self.bridge.cv2_to_imgmsg(self.cv_image1, "bgr8"))
 
       #publish new joint angles
-      #self.joint2_pub.publish(self.joint2_angle)
-      #self.joint3_pub.publish(self.joint3_angle)
-      #self.joint4_pub.publish(self.joint4_angle)
-
+      # self.joint2_pub.publish(self.joint2_angle)
+      # self.joint3_pub.publish(self.joint3_angle)
+      # self.joint4_pub.publish(self.joint4_angle)
       #publish joint centers with coordinates (y,z) taken from image 1
       self.joint_centers_yellow_pub1.publish(self.y_center)
       self.joint_centers_blue_pub1.publish(self.b_center)

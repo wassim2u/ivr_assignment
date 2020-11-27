@@ -119,7 +119,7 @@ def fk_matrix(theta1, theta2, theta3, theta4):
   mtx_2_3 = a_2_3(theta3)
   mtx_3_4 = a_3_4(theta4)
   fk = mtx_0_1*mtx_1_2*mtx_2_3*mtx_3_4
-  np_fk = np.array(fk.col(3)).astype(np.float64)[0:3]
+  np_fk = fk.col(3)[0:3]
   return np_fk
 
 #Compute the homogeneous transformation matrix with the green joint as end effector

@@ -181,12 +181,6 @@ class controller:
     def get_jacobian(self, theta1, theta2, theta3, theta4):
         a, b, c, d = symbols('a b c d')
 
-        fk = fk_matrix(a,b,c,d)
-        xx = fk[0]
-        yy = fk[1]
-        zz = fk[2]
-
-
 
         jacobian = Matrix([
             [(-3.0*sp.sin(a)*sp.sin(c) + 3*sp.sin(b)*sp.cos(a)*sp.cos(c))*sp.cos(d) - 3.5*sp.sin(a)*sp.sin(c) + 3.5*sp.sin(b)*sp.cos(a)*sp.cos(c) + 3.0*sp.sin(d)*sp.cos(a)*sp.cos(b),

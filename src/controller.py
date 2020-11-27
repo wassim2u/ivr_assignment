@@ -39,24 +39,11 @@ class controller:
         self.target_sub2 = message_filters.Subscriber("/image2/target_center", Float64MultiArray)
         self.box_sub2 = message_filters.Subscriber("/image2/box_center", Float64MultiArray)
 
-
         #initialize a publisher for joint angle
         self.joint2_t2 = rospy.Publisher("/robot/theta2", Float64, queue_size=10)
         self.joint3_t3 = rospy.Publisher("/robot/theta3", Float64, queue_size=10)
         self.joint4_t4 = rospy.Publisher("/robot/theta4", Float64, queue_size=10)
-        self.green_joint3dx = rospy.Publisher("/robot/greenx", Float64, queue_size=10)
-        self.green_joint3dy = rospy.Publisher("/robot/greeny", Float64, queue_size=10)
-        self.green_joint3dz = rospy.Publisher("/robot/greenz", Float64, queue_size=10)
-        self.green_joint3dax = rospy.Publisher("/robot/greenax", Float64, queue_size=10)
-        self.green_joint3day = rospy.Publisher("/robot/greenay", Float64, queue_size=10)
-        self.green_joint3daz = rospy.Publisher("/robot/greenaz", Float64, queue_size=10)
-
-        #Initialise publisher to be used for plotting against actual values of target
         self.target_3d_pub = rospy.Publisher("task2_2/target_3d", Float64MultiArray, queue_size=10)
-        #Initialise publishers to be used for plotting to visualise
-        #the comparison of end effector positions of FK vs vision
-        self.end_effector_FK_pub = rospy.Publisher("task3_1/end_effector_position/FK", Float64MultiArray, queue_size=10)
-        self.end_effector_vision_pub = rospy.Publisher("task3_2/end_effector_position/vision", Float64MultiArray, queue_size=10)
 
         self.prev_theta2 = 0.0
         self.prev_theta3 = 0.0
@@ -71,7 +58,10 @@ class controller:
         # initialize a publisher to move the joint4
         self.joint4_pub = rospy.Publisher("/robot/joint4_position_controller/command", Float64, queue_size=10)
 
-        self.q = np.array([1.0,1.0,1.0,1.0])
+        # Initial angles for closed loop control
+        self.q_task3_2 = np.array([0.0,0.0,0.0,0.0])
+        # Initial angles for null space control
+        self.q_task4_2 = np.array([0.0,0.0,0.0,0.0])
 
         # synchronise incoming channels using the timestamps contained in their headers
         # slop defines the delay in seconds with which messages are synchronized
@@ -99,92 +89,7 @@ class controller:
         self.previous_box_obstacle_position = np.array([0.0, 0.0, 0.0])
         self.Kp_4_2 = np.array([[0.6, 0, 0], [0, 0.6, 0], [0, 0, 0.6]])
         self.Kd_4_2 = np.array([[0.1, 0, 0], [0, 0.1, 0], [0, 0, 0.1]])
-        self.previous_jacobian = np.ones((3,4)) # Initialise a jacobian the same dimension as the jacobian we calculated
-
-
-
-    def get_x(self, image_1_coordinates):
-
-        self.x_blue = image_1_coordinates[1].data[0]
-        self.x_yellow = image_1_coordinates[0].data[0]
-
-        self.x_green = 0.0
-        self.x_red = 0.0
-
-        self.x_green == image_1_coordinates[2].data[0]
-
-        
-        self.x_red == image_1_coordinates[1].data[0]
-
-        # print(self.x_yellow, self.x_blue, self.x_green, self.x_red)
-
-    def get_y(self, image_2_coordinates):
-
-        self.y_blue = image_2_coordinates[1].data[0]
-        self.y_yellow = image_2_coordinates[0].data[0]
-
-        self.y_green = 0.0
-        self.y_red = 0.0
-
-
-        self.y_green == image_2_coordinates[2].data[0]
-
-        self.y_red == image_2_coordinates[1].data[0]
-        #print(self.y_yellow, self.y_blue, self.y_green, self.y_red)
-
-    def get_z(self, image_1_coordinates, image_2_coordinates):
-        # Regard z-value of blue joint as "baseline" for green joint and z-value of yellow
-        # joint as "baseline" for red joint
-        # i.e. the z-value of the green and red joint cannot be lower than
-        # z_blue-error margin or z_yellow-error_margin, respectively
-        # Take average of the two readings to find z-value for blue joint
-        self.z_blue = (image_1_coordinates[1].data[1] + image_2_coordinates[1].data[1]) / 2
-        self.z_yellow = (image_1_coordinates[0].data[1] + image_2_coordinates[0].data[1]) / 2
-
-        g1_z = 0.0
-        g2_z = 0.0
-        r1_z = 0.0
-        r2_z = 0.0
-
-        # if the green joint is obstructed, get the z-value from other camera for green joint and
-        # use x or y value from obstructing joint
-        """
-        if (image_1_coordinates[2].data[1] == 1234.0):
-            g1_z = image_2_coordinates[2].data[1]
-            g2_z = image_2_coordinates[2].data[1]
-        elif (image_2_coordinates[2].data[1] == 0.0):
-            g2_z = image_1_coordinates[2].data[1]
-            g1_z = image_1_coordinates[2].data[1]
-
-        if (image_1_coordinates[3].data[1] == 0.0):
-            r1_z = image_2_coordinates[3].data[1]
-            r2_z = image_2_coordinates[3].data[1]
-        elif (image_2_coordinates[3].data[1] == 0.0):
-            r2_z = image_1_coordinates[3].data[1]
-            r1_z = image_1_coordinates[3].data[1]
-<<<<<<< HEAD
-<<<<<<< HEAD
-        # if z_green or z_red is below z_blue in both pictures, set their z-value to that
-        # of z_blue
-        # First, check green
-        if (g1_z > self.z_blue + self.error_margin and g2_z > self.z_blue + self.error_margin):
-=======
-=======
->>>>>>> 0f5475ac09ca37acabe79fdd017075fbfc38c649
-        """
-
-        if (g1_z > self.z_blue+self.error_margin and g2_z > self.z_blue+self.error_margin):
-            self.z_green = self.z_blue
-        else:
-            self.z_green = (g1_z + g2_z) / 2
-
-        # then check red
-        if (r1_z > self.z_yellow + self.error_margin and r2_z > self.z_yellow + self.error_margin):
-            self.z_red = self.z_blue
-        else:
-            self.z_red = (r1_z + r2_z) / 2
-
-        print(self.z_yellow, self.z_blue, self.z_green, self.z_red)
+        self.previous_jacobian = np.ones((3,4)) # Initialise a matrix the same dimension as the jacobian we calculated
 
      # From the coordinates recieved from the topics for both images, construct 3D coordinates (measured in pixels)
      # Note: Image 2 - xz plane; Image 1 - yz plane.
@@ -265,14 +170,11 @@ class controller:
         self.red_3d[1] = - self.red_3d[1]
         self.target_3d[1] = - self.target_3d[1]
         self.box_3d[1] = -self.box_3d[1]
-
         # print("Values changed to meters:")
         # print("Yellow " + str(self.yellow_3d))
         # print("Blue:" + str(self.blue_3d))
         # print("Green" + str(self.green_3d))
         # print("Red" + str(self.red_3d))
-
-
 
 
 
@@ -283,7 +185,6 @@ class controller:
         xx = fk[0]
         yy = fk[1]
         zz = fk[2]
-
 
 
         # Using sympy diff, we can now compute the jacobian matrix:
@@ -312,12 +213,9 @@ class controller:
             [j_21, j_22, j_23, j_24],
             [j_31, j_32, j_33, j_34],
         ])
-        (print(jacobian[:,3]))
 
         jacobian = jacobian.subs(a, theta1).subs(b, theta2).subs(c, theta3).subs(d, theta4)
-
         jacobian = np.array(jacobian).astype(np.float64)
-        # jacobian = np.empty((3,4))
         return jacobian
 
     def get_inverse_jacobian(self, j):
@@ -341,6 +239,7 @@ class controller:
 
         #Get the end effector positions from the fk_matrix function that returns them.
         fk = fk_matrix(0.0, theta2, theta3, theta4)
+
         current_position = fk
 
         #Denote the desired position as target
@@ -391,7 +290,6 @@ class controller:
         #compute secondary task
         secondary_task = self.compute_secondary_task_4_2(end_effector, box_obstacle, old_q)
 
-
         # derivative of error
         xy_d = target
         xy_e = end_effector
@@ -424,7 +322,6 @@ class controller:
                 new_q[i] = np.pi / 2
             if angle < -np.pi / 2:
                 new_q[i] = -np.pi / 2
-
 
 
         return new_q
@@ -474,73 +371,52 @@ class controller:
     def callback(self, y1, b1, g1, r1, y2, b2, g2, r2, target1, target2, box1, box2):
         self.image_1_coordinates = np.array([y1, b1, g1, r1])
         self.image_2_coordinates = np.array([y2, b2, g2, r2])
-
+        #
         # Get coordinates from the two images and change the values to make them with respect to yellow center in meters
         self.create_new_3d_coordinates_from_data(y1, b1, g1, r1, y2, b2, g2, r2, target1, target2, box1, box2)
         self.changeAxis()
 
+        # ---- Task 2_1 ---- #
+        green_joint = np.array([[self.green_3d[0]], [self.green_3d[1]], [self.green_3d[2]]])
+        blue_joint = np.array([[self.blue_3d[0]], [self.blue_3d[1]], [self.blue_3d[2]]])
+        red_joint = np.array([[self.red_3d[0]], [self.red_3d[1]], [self.red_3d[2]]])
 
-        actual_coordinate = fk_green(0.0, self.joint2_angle, self.joint3_angle)
-        fk = fk_matrix(np.pi/8, np.pi/2, np.pi/8, np.pi/2)
 
-        
-        theta2, theta3 = get_joint2_3_angles(green_joint, self.prev_theta2, self.prev_theta3)
-        # print("Theta 3 error: \n", self.joint3_angle-theta3)
-        self.prev_theta2 = theta2
-        self.prev_theta3 = theta3
-        # theta4 = get_joint4_angles(theta2, theta3, blue_joint, green_joint, red_joint)
+        theta3 = get_joint3_angles(green_joint)
+        theta2 = get_joint2_angles(blue_joint, green_joint)
+        theta4 = get_joint4_angles(theta2, green_joint.T, red_joint.T)
+
+        # -----Task 2_2 -------#
+        target = Float64MultiArray()
+        target.data = self.target_3d
 
         # ---- Task 3_2 ---- #
         # new_q = self.closed_loop_control(theta1=0,
-        #                                  theta2=self.q[1],
-        #                                  theta3=self.q[2],
-        #                                  theta4=self.q[3],
+        #                                  theta2=self.q_task3_2[1],
+        #                                  theta3=self.q_task3_2[2],
+        #                                  theta4=self.q_task3_2[3],
         #                                  target=self.target_3d)
         # self.q = new_q
 
 
         # ---- Task 4_2 ---- #
-        new_q = self.null_space_control(theta1=self.q[0], theta2=self.q[1], theta3=self.q[2], theta4=self.q[3],
+        new_q = self.null_space_control(theta1=self.q_task4_2[0], theta2=self.q_task4_2[1], theta3=self.q_task4_2[2],
+                                        theta4=self.q_task4_2[3],
                              end_effector=self.red_3d,
                              target=self.target_3d,
                              box_obstacle=self.box_3d
                              )
-        print("NEW Q: ")
-        print(new_q)
-        self.q = new_q
-
-        # ---------For publishing-------#
-        ###task2_2
-        target = Float64MultiArray()
-        target.data = self.target_3d
-        ###task3_1
-        end_effector_FK = Float64MultiArray()
-        end_effector_FK.data = fk
-        end_effector_vision = Float64MultiArray()
-        end_effector_vision.data = self.red_3d
-
+        self.q_task4_2 = new_q
 
 
 
         try:
+            # Task 2_1 - Publish estimated joint angles
             self.joint2_t2.publish(theta2)
             self.joint3_t3.publish(theta3)
             self.joint4_t4.publish(theta4)
-            self.green_joint3dx.publish(self.green_3d[0])
-            self.green_joint3dy.publish(self.green_3d[1])
-            self.green_joint3dz.publish(self.green_3d[2])
-            self.green_joint3dax.publish(actual_coordinate[0])
-            self.green_joint3day.publish(actual_coordinate[1])
-            self.green_joint3daz.publish(actual_coordinate[2])
-            # self.joint2_pub.publish(self.joint2_angle)
-            # self.joint3_pub.publish(self.joint3_angle)
-            # self.joint4_pub.publish(self.joint4_angle)
-
             # Task 2_2  - Publishes the coordinates of the sphere target's center to the topic defined.
             self.target_3d_pub.publish(target)
-            # Task 3_1 - Publishes the coordinates of the end effector found through vision and through the FK equation.
-            self.end_effector_FK_pub.publish(end_effector_FK)
-            self.end_effector_vision_pub.publish(end_effector_vision)
             #Task 3_2 / Task 4_2 - Publishes the new angles computed to the robot to follow the target
             self.joint1_pub.publish(new_q[0])
             self.joint2_pub.publish(new_q[1])

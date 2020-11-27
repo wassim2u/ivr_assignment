@@ -25,7 +25,6 @@ class image_converter_2:
     # initialize the bridge between openCV and ROS
     self.bridge = CvBridge()
 
-
     self.joint_centers_yellow_pub2 = rospy.Publisher("/image2/joint_centers/yellow", Float64MultiArray, queue_size=10)
     self.joint_centers_blue_pub2 = rospy.Publisher("/image2/joint_centers/blue", Float64MultiArray, queue_size=10)
     self.joint_centers_green_pub2 = rospy.Publisher("/image2/joint_centers/green", Float64MultiArray, queue_size=10)
@@ -48,10 +47,6 @@ class image_converter_2:
     self.is_box_visible = True
     self.previous_box_positions = np.array([0.0, 0.0])
 
-  ##Code for task 4.1##
-  def is_visible(self, m):
-    return not(m==0)
-
   # Return a dictionary that contains binary images for each circle
   # Retrieve the image of a specific circle from the dictionary using their colour as key (eg. dictionary_name['Blue'])
   def detect_circles(self, img):
@@ -65,12 +60,6 @@ class image_converter_2:
     green_mask = cv2.inRange(hsv_image, (45, 10, 20), (70, 255, 255))
     # Detect Yellow Circle
     yellow_mask = cv2.inRange(hsv_image, (28, 10, 20), (35, 255, 255))
-
-    # cv2.imshow('Red Circle - Binary Image2', red_mask)
-    # cv2.imshow('Blue Circle - Binary Image2', blue_mask)
-    # cv2.imshow('Green Circle - Binary Image2', green_mask)
-    # cv2.imshow('Yellow Circle - Binary Image2', yellow_mask)
-    # cv2.waitKey(1)
 
     binary_images = {"Blue": blue_mask, "Green": green_mask, "Red": red_mask, "Yellow": yellow_mask}
     return binary_images
@@ -100,7 +89,6 @@ class image_converter_2:
     #Using the outline, draw a circle that encloses the shape of the contour found
     center, radius = cv2.minEnclosingCircle(contour_poly)
     return np.array([int(center[0]), int(center[1])])
-
 
   def threshold_orange(self, img):
     # Turn RGB Image into HSV colour space
@@ -157,7 +145,7 @@ class image_converter_2:
 
   #If the target is not visible, return the center positions calculated previously
     if (not self.is_target_visible):
-      # print("TARGET NOT VISIBLE")
+      #print("TARGET NOT VISIBLE")
       target_center= self.previous_target_positions
     else:
       contour_poly = cv2.approxPolyDP(curve=sphere_contour, epsilon=0.1, closed=True)
@@ -248,7 +236,7 @@ class image_converter_2:
     target_center, box_center = self.predict_orange_centers2(self.cv_image2)
     # When the target can be detected from this camera, update  positions of our target
     if self.is_target_visible:
-      # print("target visible")
+      #print("target visible")
       self.update_target_positions(target_center)
 
     if self.is_box_visible:

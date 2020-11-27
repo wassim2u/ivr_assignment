@@ -421,8 +421,10 @@ class controller:
             self.joint2_t2.publish(theta2)
             self.joint3_t3.publish(theta3)
             self.joint4_t4.publish(theta4)
-            # Task 2_2  - Publishes the coordinates of the sphere target's center to the topic defined.
-            self.target_3d_pub.publish(target)
+            # Task 2_2 / Task 3_2 / Task 4_2  - Publishes the coordinates of the sphere target's center to the topic defined.
+            self.target_3d_x_pub.publish(self.target_3d[0])
+            self.target_3d_y_pub.publish(self.target_3d[1])
+            self.target_3d_z_pub.publish(self.target_3d[2])
             #Task 3_2 / Task 4_2
             # - Publishes the new angles computed to the robot to follow the target
             self.joint1_pub.publish(new_q[0])
@@ -430,10 +432,6 @@ class controller:
             self.joint3_pub.publish(new_q[2])
             self.joint4_pub.publish(new_q[3])
             # - Publishes the coordinates found for end effector, target, and box
-            self.target_3d_x_pub.publish(self.target_3d[0])
-            self.target_3d_y_pub.publish(self.target_3d[1])
-            self.target_3d_z_pub.publish(self.target_3d[2])
-            
             self.box_3d_x_pub.publish(self.box_3d[0])
             self.box_3d_y_pub.publish(self.box_3d[1])
             self.box_3d_z_pub.publish(self.box_3d[2])

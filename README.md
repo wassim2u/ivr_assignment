@@ -20,11 +20,17 @@ Not reseting may not provide accurate results. To change the initial state of th
 
 Run the following commands intially, need to be done only once: 
 catkin_make
+
 source devel/setup.bash
+
 rosrun ivr_assignment image1.py
+
 rosrun ivr_assignment image2.py
+
 For the following, After every Keyboard interrupt (Ctrl+C) to stop the program, reset_angles must be 
 ran everytime before doing rosrun controller.py
+
+
 source reset_angles
 rosrun ivr_assignment controller.py
 

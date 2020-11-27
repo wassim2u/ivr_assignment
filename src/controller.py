@@ -402,7 +402,7 @@ class controller:
         #                                  theta3=self.q_task3_2[2],
         #                                  theta4=self.q_task3_2[3],
         #                                  target=self.target_3d)
-        # self.q = new_q
+        # self.q_task3_2 = new_q
 
 
         # ---- Task 4_2 ---- #

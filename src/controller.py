@@ -181,38 +181,24 @@ class controller:
     def get_jacobian(self, theta1, theta2, theta3, theta4):
         a, b, c, d = symbols('a b c d')
 
-        fk = fk_matrix(a,b,c,d)
-        xx = fk[0]
-        yy = fk[1]
-        zz = fk[2]
 
-
-        # Using sympy diff, we can now compute the jacobian matrix:
-        # Row 1
-        j_11 = diff(xx, a)
-        j_12 = diff(xx, b)
-        j_13 = diff(xx, c)
-        j_14 = diff(xx, d)
-
-        # Row 2
-        j_21 = diff(yy, a)
-        j_22 = diff(yy, b)
-        j_23 = diff(yy, c)
-        j_24 = diff(yy, d)
-
-        # Row 3
-        j_31 = diff(zz, a)
-        j_32 = diff(zz, b)
-        j_33 = diff(zz, c)
-        j_34 = diff(zz, d)
-
-
-        # Now make it a proper matrix substituting the actual angles
         jacobian = Matrix([
-            [j_11, j_12, j_13, j_14],
-            [j_21, j_22, j_23, j_24],
-            [j_31, j_32, j_33, j_34],
+            [(-3.0*sp.sin(a)*sp.sin(c) + 3*sp.sin(b)*sp.cos(a)*sp.cos(c))*sp.cos(d) - 3.5*sp.sin(a)*sp.sin(c) + 3.5*sp.sin(b)*sp.cos(a)*sp.cos(c) + 3.0*sp.sin(d)*sp.cos(a)*sp.cos(b),
+             -3.0*sp.sin(a)*sp.sin(b)*sp.sin(d) + 3*sp.sin(a)*sp.cos(b)*sp.cos(c)*sp.cos(d) + 3.5*sp.sin(a)*sp.cos(b)*sp.cos(c),
+             (-3*sp.sin(a)*sp.sin(b)*sp.sin(c) + 3.0*sp.cos(a)*sp.cos(c))*sp.cos(d) - 3.5*sp.sin(a)*sp.sin(b)*sp.sin(c) + 3.5*sp.cos(a)*sp.cos(c),
+             -(3*sp.sin(a)*sp.sin(b)*sp.cos(c) + 3.0*sp.sin(c)*sp.cos(a))*sp.sin(d) + 3.0*sp.sin(a)*sp.cos(b)*sp.cos(d)],
+
+            [(3*sp.sin(a)*sp.sin(b)*sp.cos(c) + 3.0*sp.sin(c)*sp.cos(a))*sp.cos(d) + 3.5*sp.sin(a)*sp.sin(b)*sp.cos(c) + 3.0*sp.sin(a)*sp.sin(d)*sp.cos(b) + 3.5*sp.sin(c)*sp.cos(a),
+             3.0*sp.sin(b)*sp.sin(d)*sp.cos(a) - 3*sp.cos(a)*sp.cos(b)*sp.cos(c)*sp.cos(d) - 3.5*sp.cos(a)*sp.cos(b)*sp.cos(c),
+             (3.0*sp.sin(a)*sp.cos(c) + 3*sp.sin(b)*sp.sin(c)*sp.cos(a))*sp.cos(d) + 3.5*sp.sin(a)*sp.cos(c) + 3.5*sp.sin(b)*sp.sin(c)*sp.cos(a),
+             -(3.0*sp.sin(a)*sp.sin(c) - 3*sp.sin(b)*sp.cos(a)*sp.cos(c))*sp.sin(d) - 3.0*sp.cos(a)*sp.cos(b)*sp.cos(d)],
+
+            [0,
+             -3*sp.sin(b)*sp.cos(c)*sp.cos(d) - 3.5*sp.sin(b)*sp.cos(c) - 3.0*sp.sin(d)*sp.cos(b),
+             -3*sp.sin(c)*sp.cos(b)*sp.cos(d) - 3.5*sp.sin(c)*sp.cos(b),
+             -3.0*sp.sin(b)*sp.cos(d) - 3*sp.sin(d)*sp.cos(b)*sp.cos(c)]
         ])
+
 
         jacobian = jacobian.subs(a, theta1).subs(b, theta2).subs(c, theta3).subs(d, theta4)
         jacobian = np.array(jacobian).astype(np.float64)

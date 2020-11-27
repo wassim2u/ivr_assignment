@@ -90,16 +90,16 @@ class controller:
         self.prev_time = rospy.get_time()
         self.error = np.array([0.0, 0.0, 0.0], dtype='float64')
         self.error_d = np.array([0.0, 0.0, 0.0], dtype='float64')
-        self.Kp = np.array([[0.4, 0, 0], [0, 0.4, 0], [0, 0, 0.4]])
-        self.Kd = np.array([[0.4, 0, 0], [0, 0.4, 0], [0, 0, 0.4]])
+        self.Kp = np.array([[4.8, 0, 0], [0, 4.8, 0], [0, 0,  4.9]])
+        self.Kd = np.array([[0.5, 0, 0], [0, 0.5, 0], [0, 0, 0.5]])
 
 
         # task4_2
         self.previous_q = np.array([0.0, 0.0, 0.0, 0.0])
         self.previous_end_effector_position = np.array([0.0, 0.0, 0.0])
         self.previous_box_obstacle_position = np.array([0.0, 0.0, 0.0])
-        self.Kp_4_2 = np.array([[0.8, 0, 0], [0, 0.8, 0], [0, 0, 0.8]])
-        self.Kd_4_2 = np.array([[0.3, 0, 0], [0, 0.3, 0], [0, 0, 0.3]])
+        self.Kp_4_2 = np.array([[2.8, 0, 0], [0, 2.8, 0], [0, 0, 2.8]])
+        self.Kd_4_2 = np.array([[0.2, 0, 0], [0, 0.2, 0], [0, 0, 0.2]])
         self.previous_error_derivative = np.array([0.0, 0.0, 0.0])
         self.previous_jacobian = np.ones((3,4)) # Initialise a matrix the same dimension as the jacobian we calculated
 
@@ -252,13 +252,15 @@ class controller:
         self.error = pos_d - current_position
 
 
-        # Get pseudo-jacobian, from the jacobian derived from the end effector positions from the FK equation
+        # k here is a constant that will be squared and added to the element jacobian.dot(jacobian.T)
+        # Using damped Jacobian avoids singularity by adding a small term so the columns are linearly independant.
+        k = 1
+        identity_matrix = np.eye(3)
         jacobian = self.get_jacobian(theta1, theta2, theta3, theta4)
-        j_inv = self.get_inverse_jacobian(jacobian)
-
+        damped_J = jacobian.T.dot(np.linalg.inv(jacobian.dot(jacobian.T) + (k ** 2) * identity_matrix))
 
         # calculate velocity of the joints
-        dq_d = np.dot(j_inv, (np.dot(self.Kd, self.error_d.transpose()) + np.dot(self.Kp, self.error.T)))
+        dq_d = np.dot(damped_J, (np.dot(self.Kd, self.error_d.transpose()) + np.dot(self.Kp, self.error.T)))
         q_d = q + (dt * dq_d)
         # Our configuration space for theta2,theta3, and theta4 is between -pi/2 and pi/2
         for i in range(1, 4):
@@ -280,7 +282,7 @@ class controller:
         
         # k here is a constant that will be squared and added to the element jacobian.dot(jacobian.T)
         # Using damped Jacobian avoids singularity by adding a small term so the columns are linearly independant.
-        k = 1
+        k = 2
         identity_matrix = np.eye(3)
         jacobian = self.get_jacobian(theta1, theta2, theta3, theta4)
         damped_J = jacobian.T.dot(np.linalg.inv(jacobian.dot(jacobian.T) + (k ** 2) * identity_matrix))
@@ -336,7 +338,7 @@ class controller:
     #The secondary task is to maximise this distance to avoid the box.
     def compute_secondary_task_4_2(self, end_effector, box_obstacle, q):
         # define k0 constant , which signifies how fast we want to move in the derivative direction
-        k0_constant = 0.001
+        k0_constant = 0.01
 
         # Get change in q, to be used for taking the derivative numerically
         q0, q1, q2, q3 = q[0], q[1], q[2], q[3]

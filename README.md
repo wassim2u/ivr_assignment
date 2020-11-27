@@ -18,7 +18,8 @@ Other scripts and folders (some not needed to run the project successfully) incl
 To run Task 4.2 successfully, all python files image1.py, image2.py, and controller.py must be rosrun. However, for task 4.2, before running the controller.py, run the script reset_angles everytime it launches. It is a bash script that resets all joints to 0 by publishing to the relevant topics that move the robot to its original state. This is done because we pass on joint values returned by the function closed_loop_control (Task 3.2) and null_space_control (Task 4.2) to the next iteration to have more accurate results. 
 Not reseting may not provide accurate results. To change the initial state of the robot, the joint values 
 
-Run the following commands intially, need to be done only once: 
+--Run the following commands initially, need to be done only once: 
+
 catkin_make
 
 source devel/setup.bash
@@ -27,7 +28,7 @@ rosrun ivr_assignment image1.py
 
 rosrun ivr_assignment image2.py
 
-For the following, After every Keyboard interrupt (Ctrl+C) to stop the program, reset_angles must be 
+--For the following, After every Keyboard interrupt (Ctrl+C) to stop the program, reset_angles must be 
 ran everytime before doing rosrun controller.py
 
 

@@ -1,7 +1,15 @@
 # IVR_Assignment - Annabel Jakob and Wassim Jabrane
-
-
 **When you clone the repository, please make sure that you rename the folder ivr_assignment-main to ivr_assignment. Otherwise, the code won't run because the model uses the path ivr_assignment.**
+
+
+
+## Small Demo
+
+https://github.com/wassim2u/ivr_assignment/assets/44340964/2050dd0b-b5e2-40e5-9782-28ee6f581864
+
+
+
+
 
 
 ## Packages Installed 
